@@ -1,0 +1,3735 @@
+#*----------------------------------------------------------------------*
+#* HolisticView/MetaKnowledge											*
+#*     																	*
+#*																		*
+#* Copyright Notice:                                                	*
+#* Free use of this library is permitted under the guidelines and   	*
+#* in accordance with the most current version of the Common Public 	*
+#* License.                                                         	*
+#* http://www.opensource.org/licenses/cpl.php                       	*
+#*																		*
+#*																		*
+#*																		*
+#*----------+-----------------------------------------------------------*
+#* PACKAGE  | 					 										*
+#*----------+-----------------------------------------------------------*
+#* MODULE   | mgmtlib.jacl	                                        	*
+#*----------+-----------------------------------------------------------*
+#*																		*
+#*																		*
+#*----------------------------------------------------------------------*
+#* CREATED	    														*
+#*----------------------------------------------------------------------*
+#* AGARCIA/01-2006														*
+#*																		*
+#*																		*
+#*----------------------------------------------------------------------*
+#* MODIFIED 	   														*
+#*----------------------------------------------------------------------*
+#* AGARCIA/11-2009: XA Support 											*
+#* AGARCIA/05-2010: Scheduler Support									*
+#*																		*
+#*----------------------------------------------------------------------*
+#* CHANGE LOG    														*
+#*----------------------------------------------------------------------*
+#*																		*
+#*																		*
+#*																		*
+#*																		*
+#*----------------------------------------------------------------------*
+#* NOTES 	   															*
+#*----------------------------------------------------------------------*
+#* Include with "source mgmtlib.jacl"									*
+#*																		*
+#*																		*
+#*																		*
+#*																		*
+#*----------------------------------------------------------------------*/
+
+#-------------------------------------------------------------------------
+# BEGIN 
+# GENERAL PROCS
+#-------------------------------------------------------------------------
+set _GLOBAL_DEBUG false
+set _MAXSERVERS 10
+
+#-------------------------------------------------------------------------
+# BEGIN
+# LOG RELATED PROCS
+#-------------------------------------------------------------------------
+
+set _DEBUG	6
+set _VERBOSE	5
+set _INFO	4
+set _WARNING	3
+set _ERROR	2
+set _FATAL	1
+set _OFF	0
+
+set _LOG_LEVEL	$_WARNING
+
+#--------------------------------------------------------------
+# set_loglevel
+#--------------------------------------------------------------
+proc set_loglevel { pValue } {
+	global _LOG_LEVEL
+	set _LOG_LEVEL $pValue
+}
+
+#--------------------------------------------------------------
+# get_loglevel
+#--------------------------------------------------------------
+proc get_loglevel { } {
+	global _LOG_LEVEL
+	return $_LOG_LEVEL
+}
+
+#--------------------------------------------------------------
+# do_logging
+#--------------------------------------------------------------
+proc do_logging { pLevel pMessage } {
+	
+	set _level [ get_loglevel ]
+	if { $_level >= $pLevel } {
+		puts $pMessage
+	}
+	
+}
+
+#--------------------------------------------------------------
+# log_debug
+#--------------------------------------------------------------
+proc log_debug { pMessage } {
+	global _DEBUG
+	global _VERBOSE
+	global _INFO	
+	global _WARNING	
+	global _ERROR	
+	global _FATAL	
+	global _OFF	
+
+	set _message	"DEBUG: $pMessage"
+	do_logging $_DEBUG $_message
+}
+
+#--------------------------------------------------------------
+# log_verbose
+#--------------------------------------------------------------
+proc log_verbose { pMessage } {
+	global _DEBUG
+	global _VERBOSE
+	global _INFO	
+	global _WARNING	
+	global _ERROR	
+	global _FATAL	
+	global _OFF	
+
+	set _message	"VERBOSE: $pMessage"
+	do_logging $_VERBOSE $_message
+}
+
+#--------------------------------------------------------------
+# log_info
+#--------------------------------------------------------------
+proc log_info { pMessage } {
+	global _DEBUG
+	global _VERBOSE
+	global _INFO	
+	global _WARNING	
+	global _ERROR	
+	global _FATAL	
+	global _OFF	
+
+	set _message	"INFO: $pMessage"
+	do_logging $_INFO $_message
+}
+
+#--------------------------------------------------------------
+# log_warning
+#--------------------------------------------------------------
+proc log_warning { pMessage } {
+	global _DEBUG
+	global _VERBOSE
+	global _INFO	
+	global _WARNING	
+	global _ERROR	
+	global _FATAL	
+	global _OFF	
+
+	set _message	"WARNING: $pMessage"
+	do_logging $_WARNING $_message
+}
+
+#--------------------------------------------------------------
+# log_error
+#--------------------------------------------------------------
+proc log_error { pMessage } {
+	global _DEBUG
+	global _VERBOSE
+	global _INFO	
+	global _WARNING	
+	global _ERROR	
+	global _FATAL	
+	global _OFF	
+
+	set _message	"ERROR: $pMessage"
+	do_logging $_ERROR $_message
+}
+
+#--------------------------------------------------------------
+# log_fatal
+#--------------------------------------------------------------
+proc log_fatal { pMessage } {
+	global _DEBUG
+	global _VERBOSE
+	global _INFO	
+	global _WARNING	
+	global _ERROR	
+	global _FATAL	
+	global _OFF	
+
+	set _message "FATAL: $pMessage"
+	do_logging $_FATAL $_message
+}
+#-------------------------------------------------------------------------
+# LOG RELATED PROCS
+# END
+#-------------------------------------------------------------------------
+
+#--------------------------------------------------------------
+# get_value
+#--------------------------------------------------------------
+proc debug { pValue } {
+	global _GLOBAL_DEBUG
+	
+	if { $_GLOBAL_DEBUG == "true" } {
+		puts $pValue
+	}
+}
+
+#--------------------------------------------------------------
+# get_value
+#--------------------------------------------------------------
+proc get_value { pList pName } {
+	debug "proc: get_value"
+	
+	foreach _element $pList {
+		set _name 	[ lindex $_element 0 ]
+		set _value 	[ lindex $_element 1 ]
+		
+		if { [ string compare $_name $pName ] == 0 } {
+			return $_value 
+		}
+	}
+	
+	return 
+}
+
+#--------------------------------------------------------------
+# get_values
+#--------------------------------------------------------------
+proc get_values { pList pName args } {
+	debug "proc: get_values"
+	
+	foreach _element $pList {
+
+		if { [ llength $_element ] == 1 } { 
+			
+			set _name 	[ lindex $_element 0 ]
+			set _value 	[ lindex $_element 1 ]
+
+			if { [ string compare $_name $pName ] == 0 } {
+				log_info "get_values => exiting: $args"
+				return $args
+			}
+		} else {
+			if { [ llength $args ] == 0 } {
+				set _tmp [ get_values $_element $pName $_element ]
+				if { [ llength $_tmp ] != 0 } {
+					return $_tmp
+				}
+			} else {
+				set _args [lindex $args 0]
+				set _tmp [ get_values $_element $pName $_args ]
+				return $_tmp
+			}
+
+			
+		}
+	}
+	return 
+}
+
+#--------------------------------------------------------------
+# get_host
+#--------------------------------------------------------------
+proc get_host { pValue } {
+	debug "proc: get_host"
+	
+	set _end [ expr [ string first ":" $pValue ] - 1 ]
+	set _host [ string range $pValue 0 $_end ]
+	return $_host
+}	
+
+#--------------------------------------------------------------
+# get_port
+#--------------------------------------------------------------
+proc get_port { pValue } {
+	debug "proc: get_port"
+	
+	set _begin [ expr [ string first ":" $pValue ] + 1 ]
+	set _end [ string length $pValue ]
+	set _port [ string range $pValue $_begin $_end ]
+	return $_port
+}	
+	
+#--------------------------------------------------------------
+# get_defaultcell
+#--------------------------------------------------------------
+proc get_defaultcell { args } {
+	global AdminConfig
+  	global AdminControl
+	debug "proc: get_defaultcell" 
+	
+	return [ $AdminControl getCell ]
+}
+
+#--------------------------------------------------------------
+# get_hostname
+#--------------------------------------------------------------
+proc get_hostname { pNode } {
+	global AdminConfig
+	debug "proc: get_hostname" 
+	
+	set _nodeid 	[ $AdminConfig getid /Node:$pNode/ ]
+	set _host	[ $AdminConfig showAttribute $_nodeid hostName ]
+	return $_host
+}
+
+#-------------------------------------------------------------------------
+# GENERAL PROCS
+# END
+#-------------------------------------------------------------------------
+
+#--------------------------------------------------------------
+# get_deployments
+#--------------------------------------------------------------
+proc get_deployments {  } {
+	global AdminConfig
+ 	debug "proc: get_deployments" 
+ 	
+ 	set _deployments [ $AdminConfig getid /Deployment:/ ]
+ 	
+ 	return $_deployments
+}
+
+#--------------------------------------------------------------
+# get_deployedobject
+#--------------------------------------------------------------
+proc get_deployedobject { pDeployment } {
+	global AdminConfig
+ 	debug "proc: get_deployedobject" 
+ 	
+ 	set _deployed	[ $AdminConfig showAttribute $pDeployment deployedObject ]
+ 	return $_deployed
+}
+
+#--------------------------------------------------------------
+# get_modules
+#--------------------------------------------------------------
+proc get_modules { pDeployedObject } {
+	global AdminConfig
+ 	debug "proc: get_modules" 
+ 	
+ 	set _modules	[ $AdminConfig showAttribute $pDeployedObject modules ]
+ 	return $_modules
+}
+
+#--------------------------------------------------------------
+# get_applicationlist
+#--------------------------------------------------------------
+proc get_applicationlist { } {
+	global AdminApp
+ 	debug "proc: get_applicationlist" 
+ 	
+ 	set _applist	[ $AdminApp list ]
+ 	return $_applist
+}
+
+#--------------------------------------------------------------
+# get_virtualhost_name
+#--------------------------------------------------------------
+proc get_virtualhost_name { pName } {
+	debug "proc: get_virtualhost_name" 
+	set _name	""
+	set _suffix	"_host"
+
+	if { [ string first $_suffix $pName ] != 0 } {
+		append _name $pName $_suffix
+		return $_name
+	}
+	return $pName 
+}
+
+#--------------------------------------------------------------
+# get_cluster_name
+#--------------------------------------------------------------
+proc get_cluster_name { pName } {
+	debug "proc: get_cluster_name" 
+	set _name	""
+	set _prefix	"clst_"
+
+	if { [ string first $_prefix $pName ] != 0 } {
+		append _name $_prefix $pName
+		return $_name
+	}
+	return $pName 
+}
+
+#--------------------------------------------------------------
+# get_server_name
+#--------------------------------------------------------------
+proc get_server_name { pName pNodeIndx pSrvIndx } {
+	debug "proc: get_server_name" 
+	set _name	""
+	set _prefix	"srv_"
+
+	if { [ string first $_prefix $pName ] != 0 } {
+		append _name $_prefix $pName _ $pNodeIndx _ $pSrvIndx
+		return $_name
+	}
+	return $pName 
+}
+
+#--------------------------------------------------------------
+# add_cluster
+#--------------------------------------------------------------
+proc add_cluster { pCell pName } {
+	global AdminConfig
+	debug "proc: add_cluster" 
+
+  	set _cell 	[ $AdminConfig getid /Cell:$pCell/ ]
+ 
+	set _name    	[ list name $pName ]
+  	set _desc    	[ list description "CELL CLUSTER $pName" ]
+  	set _pref    	[ list preferLocal true ]
+  	set _state		[ list stateManagement [ list [ list initialState START ] ] ]
+  	set _attributes	[ list $_name $_desc $_pref $_state ]
+
+  	set _cluster 	[ $AdminConfig create ServerCluster $_cell $_attributes ]
+}
+
+#--------------------------------------------------------------
+# add_servers2cluster
+#--------------------------------------------------------------
+proc add_servers2cluster { pCell pCluster pNode pName pWeight } {
+	global AdminConfig
+	debug "proc: add_servers2cluster"  
+        		
+        set _name   	[ list memberName $pName ]
+        set _weight	[ list weight $pWeight ]
+        set _attributes	[ list $_name $_weight ]
+        
+        set _nodeid	[ $AdminConfig getid /Node:$pNode/ ]
+        set _clusterid 	[ $AdminConfig getid /Cell:$pCell/ServerCluster:$pCluster/ ]
+	set _templateid [ $AdminConfig getid /Server:server1/ ]
+	if { [ llength $_templateid ] == 0 } {
+		set _templateid [ $AdminConfig listTemplates ApplicationServer "Default Application Server Template" ]
+		$AdminConfig createClusterMember $_clusterid $_nodeid $_attributes
+	} else {
+		$AdminConfig createClusterMember $_clusterid $_nodeid $_attributes $_templateid
+	}
+}
+
+
+#--------------------------------------------------------------
+# set_initialstate
+#--------------------------------------------------------------
+proc set_initialstate { pServer } {
+	global AdminConfig
+	debug "proc: set_initialstate"  
+	
+	set _serverid	[ $AdminConfig getid /Server:$pServer/ ]
+	set _state	[ list stateManagement [ list [ list initialState START ] ] ]
+	set _attributes	[ list $_state ]
+	
+	$AdminConfig modify $_serverid  $_attributes 
+}
+
+#--------------------------------------------------------------
+# get_clusters
+#--------------------------------------------------------------
+proc get_clusters { pCell } {
+	global AdminConfig
+	debug "proc: get_clusters"  
+	
+	set _clusters [ $AdminConfig list ServerCluster ]
+	
+	return $_clusters
+}
+
+#--------------------------------------------------------------
+# get_clusterid
+#--------------------------------------------------------------
+proc get_clusterid { pCell pCluster } {
+	global AdminConfig
+	debug "proc: get_clusterid"  
+	
+	set _clusterid 	[ $AdminConfig getid /Cell:$pCell/ServerCluster:$pCluster/ ]
+	return $_clusterid
+}
+
+#--------------------------------------------------------------
+# exist_cluster
+#--------------------------------------------------------------
+proc exist_cluster { pCell pCluster } {
+	global AdminConfig
+	debug "proc: exist_cluster"  
+	
+	set _clusterid 	[ $AdminConfig getid /Cell:$pCell/ServerCluster:$pCluster/ ]
+	return [ llength $_clusterid ] 
+}
+
+#--------------------------------------------------------------
+# fix_clustermemberslist
+#--------------------------------------------------------------
+proc fix_clustermemberslist { pValue } {
+	set _base 	[ lindex $pValue 0 ]
+	set _buffer 	[ lindex $pValue 0 ]
+	
+	#set _end 	[ expr [ string first " " $_buffer ] - 1 ] 
+	
+	set _values []
+	while { [ string length $_buffer ] != 0 } { 
+		
+		set _off [ expr [ string first " " $_buffer ] ]
+		if { $_off != - 1 } {
+			set _end [ expr [ string first " " $_buffer ] - 1 ]
+		} else {
+			set _end [ string length $_buffer ]
+		}
+		
+		set _tmp 	[ string range $_buffer 0 $_end ]
+		set _values 	[ linsert $_values end [ list $_tmp ] ]	
+		set _begin 	[ expr $_end + 2 ]
+		set _buffer 	[ string range $_base $_begin end ]
+		set _base 	[ string range $_buffer 0 end ]
+		
+	}
+	return $_values
+}
+	
+#--------------------------------------------------------------
+# get_clustermembers
+#--------------------------------------------------------------
+proc get_clustermembers { pCell pCluster } {
+	global AdminConfig
+	debug "proc: get_clustermembers"  
+	
+	set _length 0
+	set _clusterid 		[ $AdminConfig getid /Cell:$pCell/ServerCluster:$pCluster/ ]
+	if { [ llength $_clusterid ] > 0 } {
+		set _clustermembers  	[ $AdminConfig showAttribute $_clusterid members ]
+		set _tmp 		[ fix_clustermemberslist $_clustermembers ]
+		set _length 		[ llength [ lindex $_clustermembers 0 ] ]
+	} else {
+		debug "proc: get_clustermembers - cluster $pCluster not found"  
+	}		
+	
+	if { $_length == 0 } {
+		return []
+	} else {
+		return $_tmp
+	}
+}
+
+#--------------------------------------------------------------
+# do_refreshcluster
+#--------------------------------------------------------------
+proc do_refreshcluster { pCell } {
+	global AdminConfig
+	global AdminControl
+	debug "proc: do_refreshcluster"  
+ 
+	set _clustermgr [ $AdminControl completeObjectName type=ClusterMgr,cell=$pCell,* ]
+ 	if { [ llength $_clustermgr ] == 0 } {
+    		debug "Error -- clusterMgr MBean not found for cell $pCell"
+    		return
+ 	}
+ 	
+ 	$AdminControl invoke $_clustermgr retrieveClusters
+}
+
+#--------------------------------------------------------------
+# do_nodesync
+#--------------------------------------------------------------
+proc do_nodesync { args } {
+	global AdminConfig
+	global AdminControl
+	debug "proc: do_nodesync"   
+	
+	set _nodeids [ $AdminConfig list Node ]
+ 
+ 	foreach _nodeid $_nodeids {
+    		set _nodename [ $AdminConfig showAttribute $_nodeid name ]
+    		set _nodeSync [ $AdminControl completeObjectName type=NodeSync,node=$_nodename,* ]
+    		if {[llength $_nodeSync] == 0} {
+       			debug "Skiping node $_nodename -- NodeSync MBean not found"
+       			#return
+			continue
+    		}
+    		
+    		set _enabled [ $AdminControl getAttribute $_nodeSync serverStartupSyncEnabled ]     
+    		if { [ string compare $_enabled "false" ] == 0 } {
+     	 		debug "Invoking synchronization for node $_nodeSync because serverStartupSyncEnabled is set to false..."
+       			$AdminControl invoke $_nodeSync sync
+       			debug "Done with synchronization."
+    		}
+  	}
+	
+}
+
+#--------------------------------------------------------------
+# do_commmit
+#--------------------------------------------------------------
+proc do_commit { args } {
+ 	global AdminConfig
+ 	global AdminControl
+	debug "proc: do_commit"   
+	
+ 	$AdminConfig save
+ 	
+ 	if { [ llength $args ] > 0 } {	
+ 		set _cell [ lindex $args 0 ]
+ 	} else {
+ 		set _cell [ get_defaultcell ]
+ 	}
+ 		
+	do_refreshcluster $_cell
+ 	do_nodesync
+}
+ 
+#-------------------------------------------------------------------------
+# BEGIN 
+# SHARED LIBRARY
+#-------------------------------------------------------------------------
+ 
+#--------------------------------------------------------------
+# set_sharedlib
+#--------------------------------------------------------------
+proc set_sharedlib { pCell pList } {
+	global AdminConfig 
+	debug "proc: set_sharedlib" 
+	
+	set _name 	[ get_value $pList name ]
+
+	set _parent	[ $AdminConfig getid /Cell:$pCell/ ]
+	set _sharedlib 	[ $AdminConfig getid /Cell:$pCell/Library:$_name/ ]
+
+	if { [ llength $_sharedlib ] == 0 } {
+		set _sharedlib 	[ $AdminConfig create Library $_parent $pList ]
+	} else { 
+		debug "proc: set_sharedlib - modfy shared library" 
+		set _classPath	[ list classPath get_value $pList classPath ]
+		set _native	[ list nativePath get_value $pList nativePath ]
+		set _desc	[ list description get_value $pList description ]
+		set _attributes [ list $_classPath $_native $_desc ]
+		$AdminConfig modify $_sharedlib $pList
+	}
+}
+ 
+#--------------------------------------------------------------
+# add_sharedlib
+#--------------------------------------------------------------
+proc add_sharedlib { pCell pName pClassPath pNative pDesc } {
+	global AdminConfig 
+	debug "proc: add_sharedlib" 
+	
+	set _parent	[ $AdminConfig getid /Cell:$pCell/ ]
+	set _sharedlib 	[ $AdminConfig getid /Cell:$pCell/Library:$pName/ ]
+
+	set _classPath	[ list classPath $pClassPath ]
+	set _native	[ list nativePath $pNative ]
+	set _desc	[ list description $pDesc ]	
+	
+	if { [ llength $_sharedlib ] == 0 } {
+		set _name 	[ list name $pName ]
+		set _attributes [ list $_name $_classPath $_native $_desc ]
+		set_sharedlib $pCell $_attributes
+
+	} else { 
+		set _attributes [ list $_classPath $_native $_desc ]
+		$AdminConfig modify $_sharedlib $_attributes
+	}
+}
+
+#--------------------------------------------------------------
+# exists_serverlibraryref
+#--------------------------------------------------------------
+proc exists_serverlibraryref { pNode pServer pLib } {
+	global AdminConfig 
+	debug "proc: exists_serverlibraryref" 
+
+	set _exists false		
+	set _appsrv 		[ get_appserver $pNode $pServer ]
+	set _classloaders 	[ $AdminConfig showAttribute $_appsrv classloaders ] 
+	
+	foreach _classloader $_classloaders {
+		set _libraries	[ $AdminConfig list LibraryRef $_classloader ]
+
+		foreach _library $_libraries {
+			set _libraryname 	[ $AdminConfig showAttribute $_library libraryName ]
+			if { $_libraryname == $pLib } {
+				set _exists true
+				break
+			}
+		}
+	}
+	
+	return $_exists	
+}
+
+#--------------------------------------------------------------
+# exists_applicationlibraryref
+#--------------------------------------------------------------
+proc exists_applicationlibraryref { pApplication pLib } {
+	global AdminConfig 
+	debug "proc: exists_applicationlibraryref" 
+
+	set _exists false		
+	
+	set _deployment 	[ $AdminConfig getid /Deployment:$pApplication/ ]
+	set _deployed		[ get_deployedobject $_deployment ]
+	set _classloader	[ $AdminConfig showAttribute $_deployed classloader ]
+	
+	set _libraries	[ $AdminConfig list LibraryRef $_classloader ]
+
+	foreach _library $_libraries {
+		set _libraryname 	[ $AdminConfig showAttribute $_library libraryName ]
+		if { $_libraryname == $pLib } {
+			set _exists true
+			break
+		}
+	}
+	
+	return $_exists	
+}
+	
+#--------------------------------------------------------------
+# add_sharedlib2server
+#--------------------------------------------------------------
+proc add_sharedlib2server { pNode pServer pLib } {
+	global AdminConfig 
+	debug "proc: add_sharedlib2server" 
+	
+	if { [ exists_serverlibraryref $pNode $pServer $pLib ] == "true" } {
+		log_info "LibraryRef already exists"
+		return
+	}
+	
+	set _appsrv 	[ get_appserver $pNode $pServer ]
+	set _name 	[ list libraryName $pLib ]
+	set _shared	[ list sharedClassloader true ]
+	set _attributes [ list $_name $_shared ]	
+		
+	set _classloaders [ $AdminConfig showAttribute $_appsrv classloaders ]
+	
+	foreach _classloader $_classloaders {
+		debug "proc: set_sharedlib handling classloader: $_classloader\n" 
+		$AdminConfig create LibraryRef $_classloader $_attributes
+	}
+}
+
+#--------------------------------------------------------------
+# add_sharedlib2application
+#--------------------------------------------------------------
+proc add_sharedlib2application { pApplication pLib } {
+	global AdminConfig 
+	debug "proc: add_sharedlib2application" 
+	
+	if { [ exists_applicationlibraryref $pApplication $pLib ] == "true" } {
+		log_info "LibraryRef already exists"
+		return
+	}
+	
+	set _deployment 	[ $AdminConfig getid /Deployment:$pApplication/ ]
+	set _deployed		[ get_deployedobject $_deployment ]
+	set _classloader	[ $AdminConfig showAttribute $_deployed classloader ]
+	
+	set _name 	[ list libraryName $pLib ]
+	set _shared	[ list sharedClassloader true ]
+	set _attributes [ list $_name $_shared ]	
+	
+	$AdminConfig create LibraryRef $_classloader $_attributes
+}
+	
+#-------------------------------------------------------------------------
+# SHARED LIBRARY
+# END
+#-------------------------------------------------------------------------
+
+#--------------------------------------------------------------
+# get_appserver
+#--------------------------------------------------------------
+proc get_appserver { pNode pServer } {
+	global AdminConfig 
+	debug "proc: get_appserver" 
+	
+	set _server 	[ $AdminConfig getid /Node:$pNode/Server:$pServer/ ]
+	set _appsrv	[ $AdminConfig list ApplicationServer $_server ]
+	
+	return $_appsrv
+}
+
+#--------------------------------------------------------------
+# set_namespacebind
+#--------------------------------------------------------------
+proc set_namespacebind { pCell pList  } {
+	global AdminConfig 
+	debug "proc: set_namespacebind"
+	
+	set _parent [ $AdminConfig getid /Cell:$pCell/ ]
+	
+	$AdminConfig create StringNameSpaceBinding $_parent $pList
+}
+
+#--------------------------------------------------------------
+# add_namespacebind
+#--------------------------------------------------------------
+proc add_namespacebind { pCell pName pSpace pValue  } {
+	global AdminConfig 
+	debug "proc: add_namespacebind"
+	
+	set _parent 	[ $AdminConfig getid /Cell:$pCell/ ]
+	set _binding	[ $AdminConfig getid /Cell:$pCell/StringNameSpaceBinding:$pName/ ]
+	
+	set _name		[ list name $pName ]
+	set _namespace		[ list nameInNameSpace $pSpace ] 
+	set _value		[ list stringToBind $pValue ]
+	
+	if { [ llength $_binding ] == 0 } {
+		set _attributes		[ list $_name $_namespace $_value ]
+		$AdminConfig create StringNameSpaceBinding $_parent $_attributes
+	} else {
+		set _attributes		[ list $_value ]
+		$AdminConfig modify $_binding $_attributes
+	}		
+}
+
+#--------------------------------------------------------------
+# add_srv_namespacebind
+#--------------------------------------------------------------
+proc add_srv_namespacebind { pServer pName pSpace pValue  } {
+	global AdminConfig 
+	debug "proc: add_srv_namespacebind"
+	
+	set _parent 	[ $AdminConfig getid /Server:$pServer/ ]
+	set _binding	[ $AdminConfig getid /Server:$pServer/StringNameSpaceBinding:$pName/ ]
+	
+	set _name		[ list name $pName ]
+	set _namespace		[ list nameInNameSpace $pSpace ] 
+	set _value		[ list stringToBind $pValue ]
+	
+	if { [ llength $_binding ] == 0 } {
+		set _attributes		[ list $_name $_namespace $_value ]
+		$AdminConfig create StringNameSpaceBinding $_parent $_attributes
+	} else {
+		set _attributes		[ list $_value ]
+		$AdminConfig modify $_binding $_attributes
+	}		
+}
+
+
+#-------------------------------------------------------------------------
+# BEGIN 
+# VARIABLE MAP
+#-------------------------------------------------------------------------
+
+#--------------------------------------------------------------
+# get_variablemap
+#--------------------------------------------------------------
+proc get_variablemap { pCell } {
+	global AdminConfig 
+	debug "proc: get_variablemap"
+	
+	set _cellid	[ $AdminConfig getid /Cell:$pCell/ ]
+	set _varmap	[ $AdminConfig getid /Cell:$pCell/VariableMap:/ ]
+	
+	if { [ llength $_varmap ] == 0 } {
+		set _varmap [ $AdminConfig create VariableMap $_cellid {} ]
+	}
+	return $_varmap
+}
+
+#--------------------------------------------------------------
+# get_variable
+#--------------------------------------------------------------
+proc get_variable { pCell pName } {
+	global AdminConfig 
+	debug "proc: get_variable"
+	
+	set _none		[]
+	set _variablemap 	[ get_variablemap $pCell ]
+	set _entries 		[ lindex [ $AdminConfig showAttribute $_variablemap entries ] 0 ]
+	
+	foreach _entry $_entries {
+		if {  [ $AdminConfig showAttribute $_entry symbolicName ] == $pName } {
+			return $_entry
+		}
+	}
+	
+	return $_none
+}
+
+#--------------------------------------------------------------
+# set_variable
+#--------------------------------------------------------------
+proc set_variable { pCell pList } {
+	global AdminConfig 
+	debug "proc: set_variable"
+
+	set _varmap	[ get_variablemap $pCell ]
+	$AdminConfig create VariableSubstitutionEntry $_varmap $pList
+}
+	
+#--------------------------------------------------------------
+# add_variable
+#--------------------------------------------------------------
+proc add_variable { pCell pName pValue pDesc } {
+	global AdminConfig 
+	debug "proc: add_variable"
+	
+
+	set _varmap	[ get_variablemap $pCell ]
+		
+	set _name 	[ list symbolicName $pName ]
+	set _value 	[ list value $pValue ]
+	set _desc	[ list description $pDesc ]
+	set _attributes [ list $_name $_value $_desc ]
+	
+	set_variable $pCell $_attributes
+}
+
+#--------------------------------------------------------------
+# upd_variable
+#--------------------------------------------------------------
+proc upd_variable { pCell pName pValue pDesc } {
+	global AdminConfig 
+	debug "proc: upd_variable"
+	
+
+	set _varmap	[ get_variablemap $pCell ]
+		
+	set _value 	[ list value $pValue ]
+	set _desc	[ list description $pDesc ]
+	set _attributes [ list $_value $_desc ]
+	
+	set _entry	[ get_variable $pCell $pName ]
+	
+	$AdminConfig modify $_entry $_attributes
+}
+
+#-------------------------------------------------------------------------
+# VARIABLE MAP
+# END
+#-------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------
+# BEGIN
+# JavaVirtualMachine
+#-------------------------------------------------------------------------
+
+#--------------------------------------------------------------
+# set_process0
+#--------------------------------------------------------------
+proc set_process0 { pServerId pUser pGroup pUmask } {
+	global AdminConfig 
+	debug "proc: set_process0" 
+	
+	set _processid	[ $AdminConfig list ProcessExecution $pServerId ]
+	
+	set _user 	[ list runAsUser $pUser ]
+	set _group 	[ list runAsGroup $pGroup ]
+	set _umask 	[ list umask $pUmask ]
+	set _attributes [ list $_user $_group $_umask ]
+	
+	$AdminConfig modify $_processid $_attributes 
+}	
+
+#--------------------------------------------------------------
+# set_process1
+#--------------------------------------------------------------
+proc set_process1 { pServer pUser pGroup pUmask } {
+	global AdminConfig 
+	debug "proc: set_process1" 
+	
+	set _serverid 	[ $AdminConfig getid /Server:$pServer/ ]
+	
+	set_process0 $_serverid $pUser $pGroup $pUmask
+}	
+	
+#--------------------------------------------------------------
+# set_process
+#--------------------------------------------------------------
+proc set_process { pServer pUser pGroup } {
+	global AdminConfig 
+	debug "proc: set_process" 
+
+	set_process1 $pServer $pUser $pGroup "022"
+}	
+
+#--------------------------------------------------------------
+# set_process4node
+#--------------------------------------------------------------
+proc set_process4node { pNode pUser pGroup pUmask } {
+	global AdminConfig 
+	debug "proc: set_process4node" 
+
+	set _servers [ $AdminConfig getid /Node:$pNode/Server:/ ]
+	foreach _element $_servers {
+		set _name 	[ $AdminConfig showAttribute $_element name ]
+		set _id		[ list $_element ]
+		set_process0 $_element $pUser $pGroup $pUmask
+	}
+}	
+
+#--------------------------------------------------------------
+# set_monitoringpolicy
+#--------------------------------------------------------------
+proc set_monitoringpolicy { pServer pRestart pAttempts pState pInterval pTimeout } {
+	global AdminConfig 
+	debug "proc: set_monitoringpolicy" 
+	
+	set _server 	[ $AdminConfig getid /Server:$pServer/ ]
+	set _policy 	[ $AdminConfig list MonitoringPolicy $_server ]
+	
+	set _restart	[ list autoRestart $pRestart ] 
+	set _attempts	[ list maximumStartupAttempts $pAttempts ]
+	set _state	[ list nodeRestartState $pState ]
+	set _interval	[ list pingInterval $pInterval ]
+	set _timeout	[ list pingTimeout $pTimeout ]
+	set _attributes [ list $_restart $_attempts $_state $_interval $_timeout ]
+	
+	if { [ llength $_policy ] != 0 } {
+		$AdminConfig modify $_policy $_attributes 
+	}
+}
+
+#--------------------------------------------------------------
+# default_monitoringpolicy
+#--------------------------------------------------------------
+proc default_monitoringpolicy { pServer } {
+	global AdminConfig 
+	debug "proc: default_monitoringpolicy" 
+	
+	set _restart	true
+	set _attempts	3
+	set _state	RUNNING
+	set _interval	60
+	set _timeout	300
+	
+	set_monitoringpolicy $pServer $_restart $_attempts $_state $_interval $_timeout
+}
+	
+#--------------------------------------------------------------
+# set_heapsize
+#--------------------------------------------------------------
+proc set_heapsize { pServer pMin pMax } {
+	global AdminConfig 
+	debug "proc: set_heapsize" 
+		
+	set _server 	[ $AdminConfig getid /Server:$pServer/ ]
+	set _jvm	[ $AdminConfig list JavaVirtualMachine $_server ]
+	set _init	[ list initialHeapSize $pMin ]
+	set _max	[ list maximumHeapSize $pMax ]
+	set _attributes [ list $_init $_max ]
+	$AdminConfig modify $_jvm $_attributes
+}
+
+#--------------------------------------------------------------
+# set_genericJvmArgs
+#--------------------------------------------------------------
+proc set_genericJvmArgs { pServer pValue } {
+	global AdminConfig 
+	debug "proc: set_genericJvmArgs" 
+		
+	set _server 	[ $AdminConfig getid /Server:$pServer/ ]
+	set _jvm	[ $AdminConfig list JavaVirtualMachine $_server ]
+	set _jvmArgs	[ list genericJvmArguments $pValue ]
+	set _attributes [ list $_jvmArgs ]
+	$AdminConfig modify $_jvm $_attributes
+}
+
+#--------------------------------------------------------------
+# get_jvmproperty
+#--------------------------------------------------------------
+proc get_jvmpropertyset { pSet pName } {
+	global AdminConfig 
+	debug "proc: get_jvmpropertyset" 
+
+	foreach _element $pSet {
+		set _name [ $AdminConfig showAttribute $_element name ]
+		if { [ string compare $_name $pName ] == 0 } {
+			return $_element
+		}
+	}
+	return
+	
+}
+	
+#--------------------------------------------------------------
+# set_jvmproperties 
+#--------------------------------------------------------------
+proc set_jvmproperties { pServer pName pValue } {
+	global AdminConfig 
+	debug "proc: set_jvmproperties" 
+		
+	set _server 	[ $AdminConfig getid /Server:$pServer/ ]
+	set _jvm	[ $AdminConfig list JavaVirtualMachine $_server ]
+	set _procdef	[ $AdminConfig showAttribute $_server processDefinition ]
+	#set _sysprop	[ $AdminConfig showAttribute $_jvm systemProperties ]
+	set _sysprop	[ $AdminConfig list Property $_jvm ]
+	
+	set _name	[ list name $pName ]
+	set _value 	[ list value $pValue ]
+	set _desc 	[ list description "mgmtlib entry" ]
+	set _attrs	[ list $_name $_value $_desc ]
+	
+	if { [ llength [ lindex $_sysprop 0 ] ] == 0 } {
+		set _newid [ $AdminConfig create Property $_jvm $_attrs ]
+	} else {
+		set _element [ get_jvmpropertyset $_sysprop $pName ]
+		
+		if { [ llength $_element ] == 0 } {
+			set _newid [ $AdminConfig create Property $_jvm $_attrs ]
+		} else {
+			$AdminConfig modify $_element $_attrs
+		}
+		
+	}
+	
+}
+	
+#-------------------------------------------------------------------------
+# JavaVirtualMachine
+# END
+#-------------------------------------------------------------------------
+
+#--------------------------------------------------------------
+# set_classloader
+#--------------------------------------------------------------
+proc set_classloader { pNode pServer } {
+	global AdminConfig 
+	debug "proc: set_classloader" 
+		
+	set _appsrv [ get_appserver $pNode $pServer ]
+	
+	set _policy 	[ list applicationClassLoaderPolicy MULTIPLE ]
+	set _mode 	[ list applicationClassLoadingMode PARENT_LAST ]
+	set _attributes [ list $_policy $_mode ]
+	
+	$AdminConfig modify $_appsrv $_attributes
+	
+	set _classloaders [ lindex [ $AdminConfig showAttribute $_appsrv classloaders ] 0 ]
+	
+	if { [ llength $_classloaders ] == 0 } {
+		set _classloader [ $AdminConfig create Classloader $_appsrv [ list [ list mode PARENT_LAST ] ] ]
+	}
+}
+
+	
+#--------------------------------------------------------------
+# add_template
+#--------------------------------------------------------------
+proc add_template { pName } {
+	
+	debug "proc: add_template" 
+	
+	set _parent 	[ $AdminConfig getid /Node:develop-01/ ]
+	set _template 	[ $AdminConfig listTemplates Server server1 ]
+	set _name	[ list name cluster_template_server ]
+	set _attributes	[ list $_name ]
+	
+	$AdminConfig createUsingTemplate Server $_parent $_attributes $_template
+}
+
+#-------------------------------------------------------------------------
+# BEGIN
+# DRS Replicator
+#-------------------------------------------------------------------------
+
+#--------------------------------------------------------------
+# get_replicator
+#--------------------------------------------------------------
+proc get_replicator { pCell } {
+	global AdminConfig
+	debug "proc: get_replicator" 
+	
+	set _cellid 		[ $AdminConfig getid /Cell:$pCell ]
+	set _replicators	[ $AdminConfig list MultibrokerDomain $_cellid ]
+	
+	return $_replicators
+}
+
+#--------------------------------------------------------------
+# add_drsdomain
+#--------------------------------------------------------------
+proc add_drsdomain { pCell pName } {
+	global AdminConfig
+	debug "proc: add_drsdomain" 
+	
+	set _cellid 	[ $AdminConfig getid /Cell:$pCell ]
+	set _replicator [ $AdminConfig getid /Cell:$pCell/MultibrokerDomain:$pName/ ]
+	
+	if { [ llength $_replicator ] == 0 } {
+	
+		log_info "Adding drsdomain $pName"
+		
+		set _name 			[ list name $pName ]
+		set _timeout		[ list requestTimeout 5 ]
+		set _encrypt		[ list encryptionType NONE ]
+		
+		set _dsrsize		[ list size 10 ]
+		set _partition		[ list partitionOnEntry false ]
+		set _dsr			[ list partition [ list $_dsrsize $_partition ] ]
+		
+		set _eserialization	[ list entrySerializationKind BYTES ]
+		set _pserialization	[ list propertySerializationKind BYTES ] 
+		set _serialization	[ list serialization [ list $_eserialization $_eserialization ] ]
+		
+		set _poolconn		[ list poolConnections false ] 
+		set _poolsize		[ list size 32 ]
+		set _pool			[ list pooling [ list $_poolconn $_poolsize ] ]
+		
+		set _replicationset	[ list defaultDataReplicationSettings [ list $_timeout $_encrypt $_dsr $_serialization $_pool ] ]
+		
+		set _attributes 	[ list $_name $_replicationset ]
+		
+		set _replicator 	[ $AdminConfig create MultibrokerDomain $_cellid $_attributes ]
+	} else {
+		log_info "drsdomain $pName already exists"
+	}
+}
+
+#--------------------------------------------------------------
+# add_datareplicationdomain (Change in websphere 6.1)
+#--------------------------------------------------------------
+proc add_datareplicationdomain { pCell pName } {
+	global AdminConfig
+	debug "proc: add_datareplicationdomain" 
+	
+	set _cellid 	[ $AdminConfig getid /Cell:$pCell ]
+	set _replicator [ $AdminConfig getid /Cell:$pCell/DataReplicationDomain:$pName/ ]
+	
+	if { [ llength $_replicator ] == 0 } {
+	
+		log_info "Adding DataReplicationDomain $pName"
+		
+		set _name 		[ list name $pName ]
+		
+		set _encrypt		[ list encryptionType NONE ]
+		set _timeout		[ list requestTimeout 5 ]
+		set _numreplicas	[ list numberOfReplicas -1 ]
+		set _size		[ list size 10 ]
+		set _ponentry		[ list partitionOnEntry false ]
+		set _partition		[ list partition [ list $_size $_ponentry ] ]
+		
+		set _poolconn		[ list poolConnections false ] 
+		set _poolsize		[ list size 10 ]
+		set _pooling		[ list pooling [ list $_poolconn $_poolsize ] ]
+		
+		set _eserialization	[ list entrySerializationKind BYTES ]
+		set _pserialization	[ list propertySerializationKind BYTES ] 
+		set _serialization	[ list serialization [ list $_eserialization $_eserialization ] ]
+		
+		set _usessl		[ list useSSL false ]
+
+		set _settings		[ list defaultDataReplicationSettings [ list $_numreplicas $_timeout $_encrypt $_partition $_serialization $_pooling ] ]
+		
+		set _attributes 	[ list $_name $_settings ]
+		
+		set _replicator 	[ $AdminConfig create DataReplicationDomain $_cellid $_attributes ]
+	} else {
+		log_info "DataReplicationDomain $pName already exists"
+	}
+}
+
+#--------------------------------------------------------------
+# add_drsentry
+#-------------------------------------------------------------
+proc get_endpoint { pHost pPort } {
+	debug "proc: get_endpoint"
+	
+	set _host 		[ list host $pHost ]
+	set _port 		[ list port $pPort ]
+	set _attributes 	[ list $_host $_port ]
+	
+	return $_attributes
+}	
+
+#--------------------------------------------------------------
+# exists_drsentry
+#-------------------------------------------------------------
+proc exists_drsentry { pList pBroker } {
+	global AdminConfig
+	debug "proc: exists_drsentry"
+	
+	set _exists false
+	
+	foreach _element $pList {
+		set _brokername [ $AdminConfig showAttribute $_element brokerName ]
+		if { $_brokername == $pBroker } {
+			set _exists true
+			break
+		}
+	}
+	
+	return $_exists
+}
+	
+#--------------------------------------------------------------
+# add_drsentry
+#-------------------------------------------------------------
+proc add_drsentry { pCell pDomain pBroker pHost pCliPort pSrvPort } {
+	global AdminConfig
+	debug "proc: add_drsentry"
+	
+	set _domainid	[ $AdminConfig getid /Cell:$pCell/MultibrokerDomain:$pDomain/ ]
+	set _name	[ list brokerName $pBroker ]
+	set _broker	[ list brokerEndPoint [ get_endpoint $pHost $pSrvPort ] ]
+	set _client	[ list clientEndPoint [ get_endpoint $pHost $pCliPort ] ]
+	set _attributes	[ list $_name $_broker $_client ]
+	
+	set _entries	[ lindex [ $AdminConfig showAttribute $_domainid entries ] 0 ]
+	
+	log_info "Adding DRS ENTRY $_name"
+	log_info "Adding DRS ENTRY $_entries"
+	
+	
+	if { [ exists_drsentry $_entries pBroker ] == "false" } {
+		$AdminConfig create MultiBrokerRoutingEntry $_domainid $_attributes
+	} else {
+		log_info "DRS ENTRY $_name already exists"
+	}
+	
+}
+	
+#--------------------------------------------------------------
+# set_replicator
+#--------------------------------------------------------------
+proc set_replicator { pDomain pBroker pNode pServer } {
+	global AdminConfig
+	debug "proc: set_replicator" 
+	
+	set _domain	[ list domainName $pDomain ]
+	set _broker	[ list brokerName $pBroker ]
+	set _enable	[ list enable true ]
+	set _attributes	[ list $_domain $_broker $_enable ]
+	
+	set _domainid	[ $AdminConfig getid /MultibrokerDomain:$pDomain/ ]
+	set _entries	[ lindex [ $AdminConfig showAttribute $_domainid entries ] 0 ]
+	
+	set _serverid	[ $AdminConfig getid /Node:$pNode/Server:$pServer/ ] 
+	
+	log_info "Adding replicator to server $pServer"
+	
+	##if { [ llength $_entries ] == 0 } {
+
+		$AdminConfig create SystemMessageServer $_serverid $_attributes
+	##}
+}	
+
+#-------------------------------------------------------------------------
+# DRS Replicator
+# END
+#-------------------------------------------------------------------------	
+
+
+#-------------------------------------------------------------------------
+# BEGIN
+# WEBCONTAINER
+#-------------------------------------------------------------------------
+
+#--------------------------------------------------------------
+# get_sessionmgrid
+#--------------------------------------------------------------
+proc get_sessionmgrid { pServer } {
+	global AdminConfig
+	debug "proc: get_sessionmgrid" 
+
+	set _serverid 	[ $AdminConfig getid /Server:$pServer/ ]
+	set _container 	[ $AdminConfig list WebContainer $_serverid ]
+	set _ssmgrid 	[ $AdminConfig list SessionManager $_container ]
+	return $_ssmgrid
+}
+
+#--------------------------------------------------------------
+# get_drsid
+#--------------------------------------------------------------
+proc get_drsid { pServer } {
+	global AdminConfig
+	debug "proc: get_drsid" 
+
+	set _sessionmgr [ get_sessionmgrid $pServer ]
+	set _drsid 	[ $AdminConfig list DRSSettings $_sessionmgr ]
+	return $_drsid
+}
+
+
+#--------------------------------------------------------------
+# set_drsmode
+#--------------------------------------------------------------
+proc set_drsmodeclient { pServer } {
+	global AdminConfig
+	debug "proc: set_drsmodeclient" 
+	
+	set_drsmode $pServer CLIENT 
+}	
+
+#--------------------------------------------------------------
+# set_drsmodeserver
+#--------------------------------------------------------------
+proc set_drsmodeserver { pServer } {
+	global AdminConfig
+	debug "proc: set_drsmodeserver" 
+	set_drsmode $pServer SERVER 
+}	
+	
+#--------------------------------------------------------------
+# set_drsmode
+#--------------------------------------------------------------
+proc set_drsmode { pServer pMode } {
+	global AdminConfig
+	debug "proc: set_drsmode" 
+	
+	set _mode 	[ list dataReplicationMode $pMode ]
+	set _attributes	[ list $_mode ]	
+	
+	set _objectid	[ get_drsid $pServer ]
+	
+	if { [ llength $_objectid ] == 0 } {
+		set _parent [ get_sessionmgrid $pServer ]
+		$AdminConfig create DRSSettings $_parent $_attributes
+	} else { 
+		$AdminConfig modify $_objectid $_attributes			
+	}
+}	
+
+#--------------------------------------------------------------
+# set_domain
+#--------------------------------------------------------------
+proc set_domain { pServer pDomain } {
+	global AdminConfig
+	debug "proc: set_domain" 
+	
+	set _mode 	[ list messageBrokerDomainName $pDomain ]
+	set _attributes	[ list $_mode ]	
+	
+	set _objectid	[ get_drsid $pServer ]
+	
+	if { [ llength $_objectid ] == 0 } {
+		set _parent [ get_sessionmgrid $pServer ]
+		$AdminConfig create DRSSettings $_parent $_attributes
+	} else { 	
+		$AdminConfig modify $_objectid $_attributes		
+	}
+}	
+
+#--------------------------------------------------------------
+# set_preferredbroker
+#--------------------------------------------------------------
+proc set_preferredbroker { pServer pBroker } {
+	global AdminConfig
+	debug "proc: set_preferredbroker" 
+	
+	set _mode 	[ list preferredLocalDRSBrokerName $pBroker ]
+	set _attributes	[ list $_mode ]	
+	
+	set _objectid	[ get_drsid $pServer ]
+	
+	if { [ llength $_objectid ] == 0 } {
+		set _parent [ get_sessionmgrid $pServer ]
+		$AdminConfig create DRSSettings $_parent $_attributes
+	} else { 
+		$AdminConfig modify $_objectid $_attributes		
+	}
+}	
+
+#--------------------------------------------------------------
+# set_memory2memory
+#--------------------------------------------------------------
+proc set_memory2memory { pServer } {
+	global AdminConfig
+	debug "proc: set_memory2memory" 
+	set_persistencemode $pServer DATA_REPLICATION
+}	
+
+#--------------------------------------------------------------
+# set_persistencemode
+#--------------------------------------------------------------
+proc set_persistencemode { pServer pMode } {
+	global AdminConfig
+	debug "proc: set_persistencemode" 
+	
+	set _mode 	[ list sessionPersistenceMode $pMode ]
+	set _attributes [ list $_mode ]
+	
+	set _sessionmgr [ get_sessionmgrid $pServer ]
+	$AdminConfig modify $_sessionmgr $_attributes
+}	
+
+#--------------------------------------------------------------
+# set_drs
+#--------------------------------------------------------------
+proc set_drs { pServer pMode pIds pDomain pConnPoints pBroker } {
+	global AdminConfig
+	global AdminControl
+	debug "proc: set_drs" 
+	
+	set _mode 	[ list dataReplicationMode $pMode ]
+	set _ids 	[ list ids $pIds ]
+	set _domain 	[ list messageBrokerDomainName $pDomain ]
+	set _commpoints	[ list overrideHostConnectionPoints $pConnPoints ]
+	set _broker	[ list preferredLocalDRSBrokerName $pBroker ]
+	set _attributes	[ list $_mode $_ids $_domain $_commpoints $_broker ]
+	
+}
+
+#--------------------------------------------------------------
+# mod_threadpool
+#--------------------------------------------------------------
+proc mod_threadpool { pName pMin pMax pTimeout } {
+	global AdminConfig
+	global AdminControl
+	debug "proc: mod_threadpool" 
+
+	set _serverid 	[ $AdminConfig getid /Server:$pName/ ]
+	set _container 	[ $AdminConfig list WebContainer $_serverid ]
+	set _threadpool [ $AdminConfig showAttribute $_container threadPool ]
+	
+	set _min	[ list minimumSize $pMin ]
+	set _max	[ list maximumSize $pMax ]
+	set _timeout	[ list inactivityTimeout $pTimeout ]
+	set _attributes	[ list $_min $_max $_timeout ]
+	
+	$AdminConfig modify $_threadpool $_attributes
+}
+
+#--------------------------------------------------------------
+# mod_threadpool61
+#--------------------------------------------------------------
+proc mod_threadpool61 { pName pMin pMax pTimeout } {
+	global AdminConfig
+	global AdminControl
+	debug "proc: mod_threadpool61" 
+
+	set _serverid 		[ $AdminConfig getid /Server:$pName/ ]
+	set _threadpools 	[ $AdminConfig list ThreadPool $_serverid ]
+	
+	foreach _threadpool $_threadpools {
+		set _tpname [ $AdminConfig showAttribute $_threadpool name ]
+		if { $_tpname == "WebContainer" } {
+			set _min	[ list minimumSize $pMin ]
+			set _max	[ list maximumSize $pMax ]
+			set _timeout	[ list inactivityTimeout $pTimeout ]
+			set _attributes	[ list $_min $_max $_timeout ]
+			$AdminConfig modify $_threadpool $_attributes
+		}
+		
+	}
+}
+
+#--------------------------------------------------------------
+# set_servletcache
+#--------------------------------------------------------------
+proc set_servletcache { pName pValue } {
+	global AdminConfig
+	global AdminControl
+	debug "proc: set_servletcache" 
+
+	set _serverid 	[ $AdminConfig getid /Server:$pName/ ]
+	set _container 	[ $AdminConfig list WebContainer $_serverid ]
+	
+	set _servletcache	[ list enableServletCaching $pValue ]
+	set _attributes		[ list $_servletcache ]
+	
+	$AdminConfig modify $_container $_attributes
+}
+
+#--------------------------------------------------------------
+# mod_http
+#--------------------------------------------------------------
+proc mod_http { pName pPort pAddress } {
+	debug "proc: mod_http" 
+	
+	mod_transport $pName $pPort $pAddress "false"
+	
+}
+
+#--------------------------------------------------------------
+# mod_https
+#--------------------------------------------------------------
+proc mod_https { pName pPort pAddress } {
+	debug "proc: mod_https" 
+	
+	mod_transport $pName $pPort $pAddress "true"
+	
+}
+	
+#--------------------------------------------------------------
+# mod_transport
+#--------------------------------------------------------------
+proc mod_transport { pName pPort pAddress pHttps} {
+	global AdminConfig
+	global AdminControl
+	debug "proc: mod_transport" 
+
+	set _serverid 	[ $AdminConfig getid /Server:$pName/ ]
+	set _container 	[ $AdminConfig list WebContainer $_serverid ]
+	set _transports [ lindex [ $AdminConfig showAttribute $_container transports ] 0 ]
+	
+	foreach _transport $_transports {
+		set _sslenabled [ $AdminConfig showAttribute $_transport sslEnabled ]
+		
+		if { $_sslenabled == $pHttps } {
+			set _address 	[ $AdminConfig showAttribute $_transport address ]
+			set _port 	[ $AdminConfig showAttribute $_address port ]
+			set _newport 	[ list port $pPort ]
+			set _attributes [ list $_newport ]
+			$AdminConfig modify $_address $_attributes
+		}
+	}
+}
+
+#--------------------------------------------------------------
+# mod_bootstrap
+#--------------------------------------------------------------
+proc mod_bootstrap { pServer pPort pAddress } {
+	global AdminConfig
+	global AdminControl
+	debug "proc: mod_bootstrap" 
+
+	set _serverid 	[ $AdminConfig getid /Server:$pServer/ ]
+	set _nsid 	[$AdminConfig list NameServer $_serverid]
+	set _newport 	[ list port $pPort ]
+	set _attributes [ list [list BOOTSTRAP_ADDRESS [ list $_newport] ] ]
+	$AdminConfig modify $_nsid $_attributes
+}	
+
+#--------------------------------------------------------------
+# mod_soapconnector
+#--------------------------------------------------------------
+proc mod_soapconnector { pServer pPort pAddress } {
+	global AdminConfig
+	global AdminControl
+	debug "proc: mod_soapconnector" 
+
+	set _serverid 	[ $AdminConfig getid /Server:$pServer/ ]
+	set _nsid 	[$AdminConfig list SOAPConnector $_serverid]
+	set _newport 	[ list port $pPort ]
+	set _attributes [ list [list SOAP_CONNECTOR_ADDRESS [ list $_newport] ] ]
+	$AdminConfig modify $_nsid $_attributes
+}	
+
+#--------------------------------------------------------------
+# mod_admhostep61
+#--------------------------------------------------------------
+proc mod_admhostep61 { pName pPort pAddress } {
+	debug "proc: mod_admhostep61" 
+	
+	mod_transport61 $pName $pPort $pAddress "WC_adminhost"
+	
+}
+
+#--------------------------------------------------------------
+# mod_admhostsecep61
+#--------------------------------------------------------------
+proc mod_admhostsecep61 { pName pPort pAddress } {
+	debug "proc: mod_admhostsecep61" 
+	
+	mod_transport61 $pName $pPort $pAddress "WC_adminhost_secure"
+	
+}
+
+#--------------------------------------------------------------
+# mod_http61
+#--------------------------------------------------------------
+proc mod_http61 { pName pPort pAddress } {
+	debug "proc: mod_http61" 
+	
+	mod_transport61 $pName $pPort $pAddress "WC_defaulthost"
+	
+}
+
+#--------------------------------------------------------------
+# mod_https61
+#--------------------------------------------------------------
+proc mod_https61 { pName pPort pAddress } {
+	debug "proc: mod_https61" 
+	
+	mod_transport61 $pName $pPort $pAddress "WC_defaulthost_secure"
+	
+}
+
+#--------------------------------------------------------------
+# mod_transport61
+#--------------------------------------------------------------
+proc mod_transport61 { pServer pPort pAddress pEndPointName } {
+	global AdminConfig
+	global AdminControl
+	global AdminTask
+	debug "proc: mod_transport61" 
+	
+	set _serverid 	[ $AdminConfig getid /Server:$pServer/ ]
+	set _sentries 	[ $AdminConfig list ServerEntry ]
+
+	foreach _sentry $_sentries {
+  		set _name [ $AdminConfig showAttribute $_sentry serverName ]
+  		if { $_name == $pServer } {
+     			set _seps [ lindex [ $AdminConfig showAttribute $_sentry specialEndpoints ] 0 ]
+     			foreach _sep $_seps {
+        			set _epname [ $AdminConfig showAttribute $_sep endPointName ]
+        			if { $_epname == $pEndPointName } {
+           				set _endpoint [ $AdminConfig showAttribute $_sep endPoint ]
+           				set _attributes [ list [ list host $pAddress ] [ list port $pPort ] ]
+           				$AdminConfig modify $_endpoint $_attributes
+                 			break
+        			} 
+     			}
+  		}
+	}
+}
+
+#--------------------------------------------------------------
+# del_transport61
+#--------------------------------------------------------------
+proc del_transport61 { pServer pEndPointName } {
+	global AdminConfig
+	global AdminControl
+	global AdminTask
+	debug "proc: del_transport61" 
+	
+	set _serverid 	[ $AdminConfig getid /Server:$pServer/ ]
+	set _sentries 	[ $AdminConfig list ServerEntry ]
+
+	foreach _sentry $_sentries {
+  		set _name [ $AdminConfig showAttribute $_sentry serverName ]
+  		if { $_name == $pServer } {
+     			set _seps [ lindex [ $AdminConfig showAttribute $_sentry specialEndpoints ] 0 ]
+     			foreach _sep $_seps {
+        			set _epname [ $AdminConfig showAttribute $_sep endPointName ]
+        			if { $_epname == $pEndPointName } {
+           				set _endpoint [ $AdminConfig showAttribute $_sep endPoint ]
+           				$AdminConfig remove $_endpoint $_attributes
+                 			break
+        			} 
+     			}
+  		}
+	}
+}
+
+#-------------------------------------------------------------------------
+# WEBCONTAINER
+# END
+#-------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------
+# BEGIN
+# VIRTUAL HOSTS
+#-------------------------------------------------------------------------
+
+#--------------------------------------------------------------
+# set_vhost2server
+#--------------------------------------------------------------
+proc set_vhost2server { pName pServer } {
+	global AdminConfig
+ 	global AdminControl
+ 	debug "proc: set_vhost2server"
+
+	set _serverid 	[ $AdminConfig getid /Server:$pServer/ ]
+	set _container 	[ $AdminConfig list WebContainer $_serverid ]
+	set _default 	[ list defaultVirtualHostName $pName ]
+	set _attributes [ list $_default ]
+	
+	$AdminConfig modify $_container $_attributes
+}
+
+#--------------------------------------------------------------
+# add_vhost
+#--------------------------------------------------------------
+proc add_vhost { pCell pName pPort pAddress } {
+	global AdminConfig
+ 	global AdminControl
+ 	debug "proc: add_vhost" 
+  
+  	set _cell 		[ $AdminConfig getid /Cell:$pCell/ ]
+  	
+  	set _vhost 		[ list name $pName ]
+  	set _attributes		[ list $_vhost ]
+
+  	if { [ set _parent [ $AdminConfig getid /VirtualHost:$pName/ ] ] == "" } {
+  		set _parent [ $AdminConfig create VirtualHost $_cell $_attributes ]
+  	}
+	
+  	set _aliases [ lindex [ $AdminConfig showAttribute $_parent aliases ] 0 ]
+  	
+  	if { [ llength $_aliases ] > 0 } {
+		foreach _element $_aliases {
+			set _hostname 	[ $AdminConfig showAttribute $_element hostname ]
+			set _port	[ $AdminConfig showAttribute $_element port ]
+			
+			if { $_hostname == $pAddress && $_port == $pPort } {
+				return
+			}
+		}
+	}
+
+	set _host 		[ list hostname $pAddress ]
+	set _port 		[ list port $pPort ]
+     	set _attributes 	[ list $_host $_port ]
+     	$AdminConfig create HostAlias $_parent $_attributes
+}
+
+#-------------------------------------------------------------------------
+# VIRTUAL HOSTS
+# END
+#-------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------
+# BEGIN
+# J2C
+#-------------------------------------------------------------------------
+
+#--------------------------------------------------------------
+# set_j2cauthdata
+#--------------------------------------------------------------
+proc set_j2cauthdata { pCell pName pUser pPassword } {
+	global AdminConfig
+ 	global AdminControl
+ 	debug "proc: set_j2cauthdata" 
+ 	
+ 	set _security 	[ $AdminConfig getid /Cell:$pCell/Security:/ ]
+ 	set _entries	[ lindex [ $AdminConfig showAttribute $_security authDataEntries ] 0 ]
+ 	
+ 	set _alias 	[ list alias $pName ]
+	set _user	[ list userId "$pUser" ]
+ 	set _passwd	[ list password "$pPassword" ]
+ 	set _desc	[ list description "JDBC Auth" ]
+ 	set _attributes [ list $_alias $_user $_passwd $_desc ]
+ 	
+ 	if { [ llength $_entries ] > 0 } { 
+ 		foreach _entry $_entries {
+ 			if { [ $AdminConfig showAttribute $_entry alias ] == $pName } {
+ 				set _attributes [ list $_passwd ]
+ 				$AdminConfig modify $_entry $_attributes
+ 				return
+ 			}
+ 		}
+ 	}
+ 	$AdminConfig create JAASAuthData $_security $_attributes 
+}
+
+#--------------------------------------------------------------
+# mbean_updateAuthDataCfg
+#--------------------------------------------------------------
+proc mbean_updateAuthDataCfg { pCell } {
+	global AdminConfig
+ 	global AdminControl
+ 	debug "proc: mbean_updateAuthDataCfg" 
+ 	
+ 	set _runningsrvs	[ $AdminControl queryNames type=Server,* ]
+ 	foreach _element $_runningsrvs {
+ 		set _name 	[ $AdminControl getAttribute $_element name ]
+ 		set _node 	[ $AdminControl getAttribute $_element nodeName ]
+ 		set _process 	$_name 
+ 		debug "mbean_updateAuthDataCfg: $_process"
+ 		$AdminControl invoke WebSphere:cell=$pCell,mbeanIdentifier=SecurityAdmin,name=SecurityAdmin,node=$_node,platform=proxy,process=$_process,type=SecurityAdmin,version=6.1.0.43,spec=1.0 updateAuthDataCfg null
+ 	}
+ 	
+ 	
+}
+
+#--------------------------------------------------------------
+# mbean_datasourcereload
+#--------------------------------------------------------------
+proc mbean_datasourcereload { pCell } {
+	global AdminConfig
+ 	global AdminControl
+ 	debug "proc: mbean_datasourcereload" 
+ 	
+ 	set _runningsrvs	[ $AdminControl queryNames type=Server,* ]
+ 	foreach _element $_runningsrvs {
+ 		set _name 	[ $AdminControl getAttribute $_element name ]
+ 		set _node 	[ $AdminControl getAttribute $_element nodeName ]
+ 		set _process 	$_name 
+ 		debug "mbean_datasourcereload: $_process"
+ 		$AdminControl invoke WebSphere:cell=$pCell,mbeanIdentifier=DataSourceCfgHelper,name=DataSourceCfgHelper,node=$_node,platform=dynamicproxy,process=$_process,type=DataSourceCfgHelper,version=6.1.0.43,spec=1.0 reload
+ 	}
+ 	
+ 	
+}
+#--------------------------------------------------------------
+# set_provider
+#--------------------------------------------------------------
+proc set_provider { pCell pProvider pClass pCPath pNative pDesc } {
+	global AdminConfig
+ 	global AdminControl
+ 	debug "proc: set_provider" 
+ 	
+ 	set _provider 	[ $AdminConfig getid /Cell:$pCell/JDBCProvider:$pProvider/ ]
+ 	
+ 	set _name 	[ list name $pProvider ]
+	set _impl	[ list implementationClassName $pClass ]
+ 	set _classpath	[ list classpath $pCPath ]
+ 	set _native	[ list nativepath $pNative ]
+ 	set _desc	[ list description $pDesc ]
+ 	
+ 	if { [ llength $_provider ] == 0 } {
+ 		set _attributes	[ list $_name $_classpath $_native $_impl $_desc ]
+ 		set _parent 	[ $AdminConfig getid /Cell:$pCell/ ]
+ 		set _provider 	[ $AdminConfig create JDBCProvider $_parent $_attributes ]
+ 	} else {
+ 		set _attributes	[ list $_classpath $_native $_impl $_desc ]
+ 		$AdminConfig modify $_provider $_attributes
+ 	}
+ 		
+ } 	
+
+#--------------------------------------------------------------
+# get_datasourceid
+#--------------------------------------------------------------
+proc get_datasourceid { pProvider pDataSource } {
+	global AdminConfig
+ 	global AdminControl
+ 	debug "proc: get_datasourceid" 
+ 	
+ 	set _provider 	[ $AdminConfig getid /JDBCProvider:$pProvider/ ]
+ 	set _datasource [ $AdminConfig getid /JDBCProvider:$pProvider/DataSource:$pDataSource/ ]
+ 	
+ 	return $_datasource
+ }
+ 	 	
+#--------------------------------------------------------------
+# set_datasource
+#--------------------------------------------------------------
+proc set_datasource { pProvider pDataSource pJndi pHelper } {
+	global AdminConfig
+ 	global AdminControl
+ 	debug "proc: set_datasource" 
+ 	
+ 	set _provider 	[ $AdminConfig getid /JDBCProvider:$pProvider/ ]
+ 	set _datasource [ $AdminConfig getid /JDBCProvider:$pProvider/DataSource:$pDataSource/ ]
+ 	
+ 	set _name 	[ list name $pDataSource ]
+	set _jndi 	[ list jndiName $pJndi ]
+ 	set _helper 	[ list datasourceHelperClassname $pHelper ]
+ 	#set _map	[ list mapping [ list [ list authDataAlias DefaultSSLSettings ] [ list mappingConfigAlias DefaultPrincipalMapping ] ] ]
+ 	#set _attributes [ list $_name $_jndi $_helper $_map ]
+ 	set _attributes [ list $_name $_jndi $_helper ]
+ 	
+ 	if { [ llength $_datasource ] == 0 } {
+ 		set _datasource [ $AdminConfig create DataSource $_provider $_attributes ]
+ 	} else {
+ 		$AdminConfig modify $_datasource $_attributes 
+ 	}
+
+} 	
+
+#--------------------------------------------------------------
+# set_dsproperty
+#--------------------------------------------------------------
+proc set_dsproperty { pProvider pSource pName pValue pReq } {
+	global AdminConfig
+ 	global AdminControl
+ 	debug "proc: set_dsproperty" 
+ 	
+ 	set _provider 	[ $AdminConfig getid /JDBCProvider:$pProvider/ ]
+ 	set _datasource [ $AdminConfig getid /JDBCProvider:$pProvider/DataSource:$pSource/ ]
+ 	
+ 	set _name	[ list name $pName ]
+	set _value	[ list value $pValue ]
+ 	set _req	[ list required $pReq ]
+ 	set _attributes [ list $_name $_value $_req ]
+ 	
+ 	if { [ llength $_datasource ] != 0 } {
+ 		set _propset	[ $AdminConfig showAttribute $_datasource propertySet ]
+ 		if { [ llength $_propset ] == 0 } { 
+ 			set _propset 	[ $AdminConfig create J2EEResourcePropertySet $_datasource {} ]
+ 			$AdminConfig create J2EEResourceProperty $_propset $_attributes
+ 		} else {
+ 			set _property [ find_dsproperty $_propset $pName  ]
+ 			if { [ llength $_property ] == 0 } { 
+ 				$AdminConfig create J2EEResourceProperty $_propset $_attributes
+ 			} else {
+ 				$AdminConfig modify $_property $_attributes
+ 			}
+ 			
+ 		}
+ 		
+ 		 
+ 	}
+}
+
+#--------------------------------------------------------------
+# find_dsproperty
+#--------------------------------------------------------------
+proc find_dsproperty { pPropset pName } {
+	global AdminConfig
+ 	global AdminControl
+ 	debug "proc: find_dsproperty" 
+	
+	set _resprop [ $AdminConfig showAttribute $pPropset resourceProperties ] 	
+ 	foreach _element $_resprop {
+ 		set _name [ $AdminConfig showAttribute $_element name ]
+ 		if { $pName == $_name } {
+ 			return $_element
+ 		}
+	}
+	return 
+ 	
+}
+
+#--------------------------------------------------------------
+# set_authmapping
+#--------------------------------------------------------------
+proc set_authmapping { pProvider pDataSource pAlias } {
+	global AdminConfig
+ 	global AdminControl
+ 	debug "proc: set_authmapping" 
+ 	
+ 	set _datasource	[ get_datasourceid $pProvider $pDataSource ]
+ 	set _authdata 	[ list authDataAlias $pAlias ]
+	set _confalias 	[ list mappingConfigAlias DefaultPrincipalMapping ]
+	set _mapping 	[ list $_authdata $_confalias ]
+
+	$AdminConfig create MappingModule $_datasource $_mapping
+	$AdminConfig modify $_datasource [list [list authDataAlias $pAlias]]
+} 	
+
+#-------------------------------------------------------------------------
+# J2C
+# END
+#-------------------------------------------------------------------------
+
+
+#-------------------------------------------------------------------------
+# BEGIN
+# ORACLE JDBC PROVIDER
+#-------------------------------------------------------------------------
+proc add_oracle10gprovider { pCell } {
+	global AdminConfig
+	debug "proc: add_oracleprovider" 
+	
+	set	_provider		"Oracle 10g instant client"
+	set 	_implementation		"oracle.jdbc.pool.OracleConnectionPoolDataSource"
+	set	_desc			"Oracle 10g instant client JDBC Driver"
+	set	_classpath		"\$\{CELL_ORACLE_JDBC\}/ojdbc14.jar"
+	set	_native			"\$\{CELL_ORACLE_JDBC\}"
+	
+	set_provider $pCell $_provider $_implementation $_classpath $_native $_desc
+}
+
+#-------------------------------------------------------------------------
+# BEGIN
+# ORACLE JDBC PROVIDER JTA-XA
+#-------------------------------------------------------------------------
+proc add_oracle10gprovider_xa { pCell } {
+	global AdminConfig
+	debug "proc: add_oracle10gprovider_xa" 
+	
+	set	_provider		"JTA-XA Oracle 10g instant client"
+	set _implementation	"oracle.jdbc.xa.client.OracleXADataSource"
+	set	_desc			"JTA-XA Oracle 10g JDBC Driver"
+	set	_classpath		"\$\{CELL_ORACLE_JDBC\}/ojdbc14.jar"
+	set	_native			"\$\{CELL_ORACLE_JDBC\}"
+	
+	set_provider $pCell $_provider $_implementation $_classpath $_native $_desc
+}
+
+
+#-------------------------------------------------------------------------
+# ORACLE JDBC PROVIDER JTA-XA
+# END
+#-------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------
+# BEGIN
+# ORACLE DATASOURCES
+#-------------------------------------------------------------------------
+
+#--------------------------------------------------------------
+# add_oracle10oci8
+#--------------------------------------------------------------
+proc add_oracle10oci8 { pCell pDataSource pJndi pUid pPwd pHost pPort pSID } {
+	global AdminConfig
+	debug "proc: add_oracle10oci8" 
+
+	set _url    	"jdbc:oracle:oci8:@$pHost:$pPort:$pSID"
+	add_oracle10gds $pCell $pDataSource $pJndi $pUid $pPwd $pUrl 
+	
+}
+
+#--------------------------------------------------------------
+# add_oracle10gds
+#--------------------------------------------------------------
+proc add_oracle10gds { pCell pDataSource pJndi pUid pPwd pUrl } {
+	global AdminConfig
+	debug "proc: add_oracle10gds" 
+
+	set _provider	"Oracle 10g instant client"
+	set _helper	"com.ibm.websphere.rsadapter.Oracle10gDataStoreHelper"
+	
+	set_j2cauthdata $pCell $pDataSource $pUid $pPwd
+	set_datasource $_provider $pDataSource $pJndi $_helper
+	set_authmapping $_provider $pDataSource $pDataSource
+	set_dsproperty $_provider $pDataSource "URL" $pUrl "true"
+}
+
+#--------------------------------------------------------------
+# add_DataSourceOracle10g
+#--------------------------------------------------------------
+proc add_DataSourceOracle10g { pCell pDataSource pJndi pUid pPwd pUrl _provider} {
+	global AdminConfig
+	debug "proc: add_DataSourceOracle10g" 
+
+	set _helper	"com.ibm.websphere.rsadapter.Oracle10gDataStoreHelper"
+	set_j2cauthdata $pCell $pDataSource $pUid $pPwd
+	set_datasource $_provider $pDataSource $pJndi $_helper
+	set_authmapping $_provider $pDataSource $pDataSource
+	set_dsproperty $_provider $pDataSource "URL" $pUrl "true"
+}
+
+#--------------------------------------------------------------
+# add_oracle10gXA
+#--------------------------------------------------------------
+proc add_oracle10gXA { pCell pDataSource pJndi pUid pPwd pUrl } {
+	global AdminConfig
+	debug "proc: add_oracle10gXA" 
+
+	set _provider	"JTA-XA Oracle 10g instant client"
+	add_DataSourceOracle10g  $pCell $pDataSource $pJndi $pUid $pPwd $pUrl $_provider
+}
+
+#-------------------------------------------------------------------------
+# ORACLE DATASOURCES
+# END
+#-------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------
+# BEGIN
+# APPLICATIONS
+#-------------------------------------------------------------------------
+
+#--------------------------------------------------------------
+# app_classloader_mode
+#--------------------------------------------------------------
+proc app_classloader_mode { pAppId pMode } {
+	global AdminConfig
+ 	debug "proc: app_classloader_mode" 
+ 	
+ 	set _classloader 	[ $AdminConfig showAttribute $pAppId classloader ]
+ 	set _mode 		[ list [ list mode $pMode ] ]
+ 	$AdminConfig modify $_classloader $_mode
+ 	
+}
+
+#--------------------------------------------------------------
+# webapp_classloader_mode
+#--------------------------------------------------------------
+proc webapp_classloader_mode { pWebAppId pMode } {
+	global AdminConfig
+ 	debug "proc: webapp_classloader_mode" 
+ 	
+ 	set _classloader [ $AdminConfig showAttribute $pWebAppId classloaderMode ]
+	log_debug [ llength $_classloader ]
+	if { [ llength $_classloader ] > 0 } {
+		log_debug $_classloader
+ 		#set _mode 		[ list [ list mode $pMode ] ]
+ 		#$AdminConfig modify $_classloader $_mode
+ 		set _mode 		[ list classloaderMode $pMode ]
+ 		set _attributes 	[ list $_mode ]
+ 		$AdminConfig modify $pWebAppId $_attributes
+	}
+}
+
+#--------------------------------------------------------------
+# app_setparentlast
+#--------------------------------------------------------------
+proc app_setparentlast { pAppId } {
+	global AdminConfig
+ 	debug "proc: app_setparentlast" 
+ 	
+ 	app_classloader_mode $pAppId PARENT_LAST
+ 	
+}
+
+#--------------------------------------------------------------
+# app_setparentlastall
+#--------------------------------------------------------------
+proc app_setparentlastall { } {
+	global AdminConfig
+ 	debug "proc: app_setparentlastall" 
+ 	
+ 	set _deployments [ get_deployments ]
+ 	foreach _element $_deployments {
+ 		set _deployed  [ get_deployedobject $_element ]
+ 		set _modules [ get_modules $_deployed ]
+ 		app_setparentlast $_deployed
+ 		foreach _module $_modules {
+			foreach _mm $_module {
+				log_debug "MODULE $_mm"
+ 				if { [regexp WebModuleDeployment $_mm] == 1 } {
+ 					webapp_classloader_mode $_mm PARENT_LAST
+ 				}
+			}
+ 		}
+ 	}
+}
+
+
+
+#-------------------------------------------------------------------------
+# APPLICATIONS
+# END
+#-------------------------------------------------------------------------
+
+
+#-------------------------------------------------------------------------
+# BEGIN
+# RESOURCES
+#
+#-------------------------------------------------------------------------
+
+#--------------------------------------------------------------
+# add_mailprovider
+#--------------------------------------------------------------
+proc add_mailprovider { pCell pMailProvider } {
+	global AdminConfig
+ 	debug "proc: add_mailprovider"
+ 	
+ 	set _parent	[ $AdminConfig getid /Cell:$pCell/ ]
+ 	set _mailprovider [ $AdminConfig getid /Cell:$pCell/MailProvider:$pMailProvider/ ]
+ 	
+ 	if { [ llength $_mailprovider ] == 0 } {
+		set _name 		[ list name $pMailProvider ]
+		set _desc		[ list description "Standard Mail Provider" ]
+		set _attributes		[ list $_name $_desc ]
+		set _mailprovider 	[ $AdminConfig create MailProvider $_parent $_attributes ]
+ 	}
+}
+
+#--------------------------------------------------------------
+# get_mailtransport
+#--------------------------------------------------------------
+proc get_mailtransport { pClassName pClassPath pProtocol pType } {
+	global AdminConfig
+ 	debug "proc: get_mailtransport"
+ 	
+ 	set _classname		[ list classname $pClassName ]
+ 	set _classpath		[ list classpath $pClassPath ]
+	set _protocol		[ list protocol $pProtocol ] 		
+ 	set _type		[ list type $pType ]
+ 	set _attributes		[ list [ list $_classname $_classpath $_protocol $_type ] ]
+ 	
+ 	return $_attributes
+}
+
+#--------------------------------------------------------------
+# get_builtinsmtp
+#--------------------------------------------------------------
+proc get_builtinsmtp { } {
+	global AdminConfig
+ 	debug "proc: get_builtinsmtp"
+ 	
+	set _builtin 	"(cells/seg-social.es|resources.xml#builtin_smtp)" 	 	
+ 	return $_builtin
+}
+
+#--------------------------------------------------------------
+# get_builtinmailprovider
+#--------------------------------------------------------------
+proc get_builtinmailprovider { } {
+	global AdminConfig
+ 	debug "proc: get_builtinmailprovider"
+ 	
+	set _builtin 	"Buil-in Mail Provider(cells/seg-social.es|resources.xml#builtin_mailprovider)"
+ 	return $_builtin
+}
+ 	
+#--------------------------------------------------------------
+# add_mailsession
+#--------------------------------------------------------------
+proc add_mailsession { pCell pMailProvider pMailSession pJndi pAddress pMailFrom } {
+	global AdminConfig
+ 	debug "proc: add_mailsession"
+ 	
+ 	set _parent		[ $AdminConfig getid /Cell:$pCell/ ]
+ 	set _mailprovider 	[ $AdminConfig getid /Cell:$pCell/MailProvider:$pMailProvider/ ]
+ 	set _mailsession 	[ $AdminConfig getid /Cell:$pCell/MailProvider:$pMailProvider/MailSession:$pMailSession/ ]
+ 	
+ 	if { [ llength $_mailsession ] == 0 } {
+		set _name 		[ list name $pMailSession ]
+		set _jndi		[ list jndiName $pJndi ]
+		set _addr		[ list mailTransportHost $pAddress ]
+		set _protocol		[ get_builtinsmtp ]
+		set _mailtransport	[ list mailTransportProtocol $_protocol ]
+		set _mailfrom		[ list mailFrom $pMailFrom ]
+		set _attributes		[ list $_name $_jndi $_addr $_mailfrom $_mailtransport ]
+		
+		set _mailsession 	[ $AdminConfig create MailSession $_mailprovider $_attributes ]
+ 	}
+}
+
+#--------------------------------------------------------------
+# add_defaultmailsession
+#--------------------------------------------------------------
+proc add_defaultmailsession { pCell pMailSession pJndi pAddress pMailFrom } {
+	global AdminConfig
+ 	debug "proc: add_defaultmailsession"
+ 	
+ 	set _mailprovider "Built-in Mail Provider"
+ 	add_mailsession $pCell $_mailprovider $pMailSession $pJndi $pAddress $pMailFrom
+ 	
+}
+
+#-------------------------------------------------------------------------
+#
+# RESOURCES
+# END
+#------------------------------------------------------------------------- 	
+ 	
+#-------------------------------------------------------------------------
+# BEGIN
+# CONTROL FUNCTIONS 
+#
+#-------------------------------------------------------------------------
+
+#--------------------------------------------------------------
+# start_server
+#--------------------------------------------------------------
+proc start_server { pNode pServer } {
+	global AdminConfig
+ 	global AdminControl
+ 	debug "proc: start_server" 
+ 	
+ 	$AdminControl startServer $pServer $pNode
+}
+
+#--------------------------------------------------------------
+# start_servers
+#--------------------------------------------------------------
+proc start_servers { pNode } {
+	global AdminConfig
+ 	global AdminControl
+ 	debug "proc: start_servers" 
+ 	
+ 	set _servers 		[ $AdminConfig getid /Node:$pNode/Server:/ ]
+ 	
+ 	foreach _element $_servers {
+ 		set _name	[ $AdminConfig showAttribute $_element name ]
+ 		start_server $pNode $_name
+ 	}
+}
+
+#--------------------------------------------------------------
+# stop_server
+#--------------------------------------------------------------
+proc stop_server { pNode pServer } {
+	global AdminConfig
+ 	global AdminControl
+ 	debug "proc: stop_server" 
+ 	
+ 	$AdminControl stopServer $pServer $pNode
+}
+
+#--------------------------------------------------------------
+# stop_servers
+#--------------------------------------------------------------
+proc stop_servers { pNode } {
+	global AdminConfig
+ 	global AdminControl
+ 	debug "proc: stop_servers" 
+ 	
+ 	set _runningsrvs	[ $AdminControl queryNames type=Server,node=$pNode,* ]
+ 	foreach _element $_runningsrvs {
+ 		set _name 	[ $AdminControl getAttribute $_element name ]
+ 		if { $_name != "nodeagent" } {
+			$AdminControl stopServer $_name $pNode
+ 		}
+ 	}
+}
+
+#-------------------------------------------------------------------------
+#
+# CONTROL FUNCTIONS 
+# END
+#-------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------
+# BEGIN 
+# SPECIFIC PROCEDURES
+#-------------------------------------------------------------------------
+
+#--------------------------------------------------------------
+# create_srv_namebindings
+#--------------------------------------------------------------		
+proc create_srv_namebindings { pServer pList } {
+ 	puts "proc: create_srv_namebindings" 
+
+ 	foreach _element $pList {
+ 		set _name 	[ get_value $_element "name" ]
+ 		set _namespace 	[ get_value $_element "nameInNameSpace" ]
+ 		set _string	[ get_value $_element "stringToBind" ]
+ 		
+ 		add_srv_namespacebind $pServer $_name $_namespace $_string
+	}
+}
+
+#--------------------------------------------------------------
+# create_namebindings
+#--------------------------------------------------------------		
+proc create_namebindings { pCell pList } {
+ 	puts "proc: create_namebindings" 
+
+ 	foreach _element $pList {
+ 		set _name 	[ get_value $_element "name" ]
+ 		set _namespace 	[ get_value $_element "nameInNameSpace" ]
+ 		set _string	[ get_value $_element "stringToBind" ]
+ 		
+ 		add_namespacebind $pCell $_name $_namespace $_string
+	}
+}
+
+#--------------------------------------------------------------
+# create_variables
+#--------------------------------------------------------------		
+proc create_variables { pCell pList } {
+ 	puts "proc: create_variables" 
+ 	
+	foreach _element $pList {
+		set _name  [ get_value $_element "symbolicName" ]
+		set _value [ get_value $_element "value" ] 
+		set _desc  [ get_value $_element "description" ] 
+		
+		if { [ llength [ get_variable $pCell $_name ] ] < 1 } {
+			add_variable $pCell $_name $_value $_desc
+		} else {
+			upd_variable $pCell $_name $_value $_desc
+		}
+	}
+ 	
+}
+
+#--------------------------------------------------------------
+# create_libraries
+#--------------------------------------------------------------		
+proc create_libraries { pCell pList } {
+ 	puts "proc: create_libraries" 
+ 	
+ 	foreach _element $pList {
+ 		
+ 		set _name  	[ get_value $_element "name" ]
+		set _cpath 	[ get_value $_element "classPath" ]
+		set _npath 	[ get_value $_element "nativePath" ]
+		set _desc 	[ get_value $_element "description" ]
+		set _type	[ get_value $_element "type" ]
+		
+		add_sharedlib $pCell $_name $_cpath $_npath $_desc
+	}
+ 	
+}
+
+#--------------------------------------------------------------
+# create_libraryref
+#--------------------------------------------------------------		
+proc create_libraryref { pCell pList } {
+	global AdminConfig
+ 	puts "proc: create_libraryref" 
+ 	
+ 	set _clusters [ get_clusters $pCell ]
+ 	foreach _cluster $_clusters {
+ 		set _clustername 	[ $AdminConfig showAttribute $_cluster name ]
+ 		set _servers 		[ get_clustermembers $pCell $_clustername ]
+ 		foreach _server $_servers {
+ 			
+ 			set _servername	[ $AdminConfig showAttribute $_server memberName ]
+ 			set _nodename 	[ $AdminConfig showAttribute $_server nodeName ]
+ 			
+ 	
+ 			foreach _element $pList {
+ 		
+ 				set _name  	[ get_value $_element "name" ]
+				set _type	[ get_value $_element "type" ]
+				
+				if { $_type == "server" } {
+ 					add_sharedlib2server $_nodename $_servername $_name
+ 				}
+ 			}
+ 		}
+	}
+	
+	set _skiplist		[ list adminconsole filetransfer ]
+ 	set _applications 	[ get_applicationlist ]
+ 	foreach _application $_applications {
+		if { [ lsearch $_skiplist $_application ] == -1 } {
+ 			
+ 			foreach _element $pList {
+ 		
+ 				set _name  	[ get_value $_element "name" ]
+				set _type	[ get_value $_element "type" ]
+				
+				if { $_type == "application" } {
+ 					add_sharedlib2application $_application $_name
+ 				}
+ 			}
+ 			
+ 		}
+ 	}
+ 	
+}
+
+#--------------------------------------------------------------
+# create_jvmproperties
+#--------------------------------------------------------------		
+proc create_jvmproperties { pCell pList } {
+	global AdminConfig
+ 	puts "proc: create_jvmproperties" 
+ 	
+ 	set _clusters [ get_clusters $pCell ]
+ 	foreach _cluster $_clusters {
+ 		set _clustername 	[ $AdminConfig showAttribute $_cluster name ]
+ 		set _servers 		[ get_clustermembers $pCell $_clustername ]
+ 		
+ 		foreach _server $_servers {
+ 			
+ 			set _servername	[ $AdminConfig showAttribute $_server memberName ]
+ 	
+ 			foreach _element $pList {
+ 		
+ 				set _name  	[ get_value $_element "name" ]
+				set _value	[ get_value $_element "value" ]
+				debug "Server=$_servername - Name=$_name - Value=$_value"
+				set_jvmproperties $_servername $_name $_value 
+			}
+		}
+	}
+	
+	#----------------------
+	# Handle the dmgr case
+	#----------------------
+	set _servername  "dmgr"
+	foreach _element $pList {
+ 		set _name  	[ get_value $_element "name" ]
+		set _value	[ get_value $_element "value" ]
+		log_debug "Server=$_servername - Name=$_name - Value=$_value"
+		set_jvmproperties $_servername $_name $_value 
+	}
+	
+}
+
+#--------------------------------------------------------------
+# create_virtualhosts
+#--------------------------------------------------------------		
+proc create_virtualhosts { pCell pClusters pVirtualHosts } {
+	global AdminConfig
+ 	global AdminControl
+ 	puts "proc: create_virtualhosts"
+	
+ 	foreach _cluster $pClusters {
+ 	
+ 		set _name 		[ get_value $_cluster "name" ]
+ 		set _http 		[ get_value $_cluster "http_base" ]
+ 		set _https 		[ get_value $_cluster "https_base" ]
+ 		set _transport2vhost	[ get_value $_cluster "transport2vhost" ]
+ 		set _virtualhost	[ get_value $_cluster "vhost" ]
+ 		
+		set _clustername	[ get_cluster_name $_name ]
+		
+		
+		if { $_transport2vhost == "true" } {
+			add_vhost $pCell $_virtualhost $_http *
+			add_vhost $pCell $_virtualhost $_https *
+		}
+ 	}
+ 	
+ 	foreach _element $pVirtualHosts {
+ 		set _name 	[ get_value $_element "name" ]
+ 		set _aliases	[ get_value $_element "aliases" ]
+ 		
+		foreach _alias $_aliases {
+			set _host [ get_host $_alias ]
+			set _port [ get_port $_alias ]
+			add_vhost $pCell $_name $_port $_host
+		}
+	}
+}
+ 	
+#--------------------------------------------------------------
+# create_clusters
+#--------------------------------------------------------------		
+proc create_clusters { pCell pClusters} {
+	global AdminConfig
+ 	global AdminControl
+ 	puts "proc: create_clusters"
+
+	puts ""
+	puts "----------------------------------------------------------------------"
+	puts " Creating WebSphere Clusters on cell $pCell"
+	puts "----------------------------------------------------------------------" 	
+	
+ 	foreach _cluster $pClusters {
+ 	
+ 		set _name 		[ get_value $_cluster "name" ]
+ 		set _http 		[ get_value $_cluster "http_base" ]
+ 		set _https 		[ get_value $_cluster "https_base" ]
+ 		set _servers 		[ get_value $_cluster "servers" ]
+ 		set _weight		[ get_value $_cluster "weight" ]
+
+ 		set _clustername	[ get_cluster_name $_name ]
+ 		
+ 		if { [ exist_cluster $pCell $_clustername ] == 0 } {
+ 		
+ 			puts "\tCreating server cluster: $_clustername"	
+ 			
+			add_cluster $pCell $_clustername
+		}
+ 	}
+ 	
+	puts "----------------------------------------------------------------------"
+	puts ""
+} 	
+
+#--------------------------------------------------------------
+# create_clustermembers
+#--------------------------------------------------------------		
+proc create_clustermembers { pCell pNodes pClusters } {
+	global AdminConfig
+ 	global AdminControl
+ 	puts "proc: create_clustermembers"
+
+	puts ""
+	puts "----------------------------------------------------------------------"
+	puts " Creating cluster members"
+	puts "----------------------------------------------------------------------" 	
+	puts "Node\t\t\tCluster\t\t\tServer\n" 	
+	
+ 	foreach _cluster $pClusters {
+ 	
+ 		set _name 		[ get_value $_cluster "name" ]
+ 		set _type 		[ get_value $_cluster "type" ]
+ 		set _weight		[ get_value $_cluster "weight" ]
+ 		set _servers 		[ get_value $_cluster "servers" ]
+ 		set _virtualhost	[ get_value $_cluster "vhost" ]
+ 		
+ 		set _http 		[ get_value $_cluster "http_base" ]
+ 		set _https 		[ get_value $_cluster "https_base" ]
+ 		
+ 		
+
+ 		set _clustername	[ get_cluster_name $_name ]
+ 		
+ 		if { [ exist_cluster $pCell $_clustername ] == 1 } {
+			
+			set _nodecount 		[ llength $pNodes ]
+			set _maxallnodes 	[ expr $_servers * $_nodecount ]
+			
+			set _membercount [ llength [ get_clustermembers $pCell $_clustername ] ]
+			
+			foreach _node $pNodes {
+				set _nodename 	[ get_value $_node "name" ]
+ 				set _srvid 	[ get_value $_node "srvid" ]
+				if { $_membercount < $_maxallnodes } {
+					
+					for { set _index [ expr 1 + $_membercount ] } { $_index <= $_servers } { incr _index } { 
+						set _servername [ get_server_name $_name $_srvid $_index ]
+						
+						puts "$_nodename\t\t$_clustername\t\t$_servername"
+						
+						add_servers2cluster $pCell $_clustername $_nodename $_servername $_weight 
+						
+						set_classloader $_nodename $_servername
+						
+						mod_http61 $_servername [ expr $_http + $_index - 1 ] "\*"
+						mod_https61 $_servername [ expr $_https + $_index - 1 ] "\*"
+						mod_admhostep61 $_servername [ expr $_http + 1000 + $_index - 1 ] "\*"
+						mod_admhostsecep61 $_servername [ expr $_https + 1000 + $_index - 1 ] "\*"
+						
+						mod_bootstrap $_servername [ expr $_http + 400 + $_index - 1 ] ""
+						mod_soapconnector $_servername [ expr $_https + 400 + $_index - 1 ] ""
+							
+					}
+				}
+			}
+		}
+ 	}
+	puts "----------------------------------------------------------------------"
+	puts ""
+} 	
+
+#--------------------------------------------------------------
+# create_othersettings
+#--------------------------------------------------------------		
+proc create_othersettings { pCell pSettings } {
+	global AdminConfig
+ 	global AdminControl
+ 	puts "proc: create_othersettings"
+ 	
+ 	foreach _cluster $pSettings {
+ 	
+ 		set _name 		[ get_value $_cluster "name" ]
+ 		set _minthreads 	[ get_value $_cluster "minthreads" ]
+ 		set _maxthreads 	[ get_value $_cluster "maxthreads" ]
+ 		set _timeout 		[ get_value $_cluster "timeout" ]
+ 		set _initial 		[ get_value $_cluster "initial" ]
+ 		set _maximum 		[ get_value $_cluster "maximum" ]
+ 		set _jvmArgs 		[ get_value $_cluster "jvmArgs" ] 
+		set _virtualhost	[ get_value $_cluster "vhost" ]
+		set _user		[ get_value $_cluster "user" ]
+		set _group		[ get_value $_cluster "group" ]
+
+ 		set _clustername	[ get_cluster_name $_name ]
+		set _clustermembers 	[ get_clustermembers $pCell $_clustername ]
+		
+		foreach _server $_clustermembers {
+			
+			set _servername	[ $AdminConfig showAttribute $_server memberName ]
+			set_servletcache $_servername true
+			set_vhost2server $_virtualhost $_servername
+			set _rc [ catch { mod_threadpool $_servername $_minthreads $_maxthreads $_timeout } ]
+			if { $_rc != 0 } {
+				mod_threadpool61 $_servername $_minthreads $_maxthreads $_timeout 
+			}
+			
+			set_heapsize $_servername $_initial $_maximum
+			set_genericJvmArgs $_servername $_jvmArgs
+			set_process $_servername $_user $_group
+			set_initialstate $_servername
+			default_monitoringpolicy $_servername
+
+		}
+ 	}
+} 	
+
+#--------------------------------------------------------------
+# create_replicationdomains 
+#--------------------------------------------------------------		
+proc create_replicationdomains { pCell pNodes pClusters } {
+	global AdminConfig
+ 	global AdminControl
+ 	puts "proc: create_replicationdomains"
+	
+	
+ 	foreach _cluster $pClusters {
+ 	
+ 		set _name 		[ get_value $_cluster "name" ]
+ 		set _type 		[ get_value $_cluster "type" ]
+ 		set _brokerdomain 	[ get_value $_cluster "brokerdomain" ]
+ 		set _clientport 	[ get_value $_cluster "cport" ] 
+ 		set _serverport 	[ get_value $_cluster "sport" ] 
+
+ 		if { $_type == "replicator" } {
+ 			add_drsdomain $pCell $_brokerdomain
+
+ 			set _clustername	[ get_cluster_name $_name ]
+			set _clustermembers 	[ get_clustermembers $pCell $_clustername ]
+			
+			
+			
+			foreach _server $_clustermembers {
+				set _nodes 	$pNodes 
+				
+				set _servername	[ $AdminConfig showAttribute $_server memberName ]
+				set _nodename	[ $AdminConfig showAttribute $_server nodeName ]
+				set _ip  	[ get_hostname $_nodename ]
+
+				set _row 	[ lindex [ get_values $_nodes $_nodename ] 0 ]
+				#set _row1 	[ get_values $_nodes $_nodename ] 
+				set _id  	[ get_value $_row "srvid" ]
+				
+				set _replicator "" 
+				append _replicator rpl_ $_brokerdomain _ $_id 
+				
+				log_info "Replicator: $_replicator"
+				log_info $_id
+				
+				add_drsentry $pCell $_brokerdomain $_replicator $_ip $_clientport $_serverport
+				set_replicator $_brokerdomain $_replicator $_nodename $_servername
+				set_memory2memory $_servername
+				set_drsmodeserver $_servername
+			}
+		}
+ 	}
+} 	
+
+#--------------------------------------------------------------
+# config_brokerclients
+#--------------------------------------------------------------		
+proc config_brokerclients { pCell pNodes pClusters } {
+	global AdminConfig
+ 	global AdminControl
+ 	puts "proc: config_brokerclients"
+	
+	
+ 	foreach _cluster $pClusters {
+ 	
+ 		set _name 		[ get_value $_cluster "name" ]
+ 		set _type 		[ get_value $_cluster "type" ]
+ 		set _brokerdomain 	[ get_value $_cluster "brokerdomain" ]
+		
+
+ 		if { $_type == "application" && $_brokerdomain != "none" } {
+
+ 			set _clustername	[ get_cluster_name $_name ]
+			set _clustermembers 	[ get_clustermembers $pCell $_clustername ]
+
+			foreach _server $_clustermembers {
+				set _servername	[ $AdminConfig showAttribute $_server memberName ]
+				set _nodename	[ $AdminConfig showAttribute $_server nodeName ]
+				set _ip  	[ get_hostname $_nodename ]
+				
+				set _row 	[ lindex [ get_values $pNodes $_nodename ] 0 ]
+				set _id  	[ get_value $_row "srvid" ]
+				
+				set _replicator "" 
+				append _replicator rpl_ $_brokerdomain _ $_id 
+				
+				set_memory2memory $_servername
+				set_drsmodeclient $_servername
+				set_domain $_servername $_brokerdomain
+				set_preferredbroker $_servername $_replicator
+			}
+		}
+ 	}
+} 	 
+
+#--------------------------------------------------------------
+# create_replicationdomains61 (change in websphere 6.1) 
+#--------------------------------------------------------------		
+proc create_replicationdomains61 { pCell pNodes pClusters } {
+	global AdminConfig
+ 	global AdminControl
+ 	puts "proc: create_replicationdomains61"
+	
+	
+ 	foreach _cluster $pClusters {
+ 	
+ 		set _name 		[ get_value $_cluster "name" ]
+ 		set _type 		[ get_value $_cluster "type" ]
+ 		set _brokerdomain 	[ get_value $_cluster "brokerdomain" ]
+ 		set _clientport 	[ get_value $_cluster "cport" ] 
+ 		set _serverport 	[ get_value $_cluster "sport" ] 
+
+ 		if { $_type == "replicator" } {
+ 			add_datareplicationdomain $pCell $_brokerdomain
+
+ 			set _clustername	[ get_cluster_name $_name ]
+			set _clustermembers 	[ get_clustermembers $pCell $_clustername ]
+			
+			
+			
+			foreach _server $_clustermembers {
+				set _nodes 	$pNodes 
+				
+				set _servername	[ $AdminConfig showAttribute $_server memberName ]
+				set _nodename	[ $AdminConfig showAttribute $_server nodeName ]
+				
+				#set _ip  	[ get_hostname $_nodename ]
+				#set _row 	[ lindex [ get_values $_nodes $_nodename ] 0 ]
+				#set _row1 	[ get_values $_nodes $_nodename ] 
+				#set _id  	[ get_value $_row "srvid" ]
+				#set _replicator "" 
+				#append _replicator rpl_ $_brokerdomain _ $_id 
+				#log_info "Replicator: $_replicator"
+				#log_info $_id
+				#add_drsentry $pCell $_brokerdomain $_replicator $_ip $_clientport $_serverport
+				#set_replicator $_brokerdomain $_replicator $_nodename $_servername
+				
+				set_domain $_servername $_brokerdomain
+				set_memory2memory $_servername
+				set_drsmodeserver $_servername
+			}
+		}
+ 	}
+} 	
+
+#--------------------------------------------------------------
+# config_brokerclients61
+#--------------------------------------------------------------		
+proc config_brokerclients61 { pCell pNodes pClusters } {
+	global AdminConfig
+ 	global AdminControl
+ 	puts "proc: config_brokerclients61"
+	
+	
+ 	foreach _cluster $pClusters {
+ 	
+ 		set _name 		[ get_value $_cluster "name" ]
+ 		set _type 		[ get_value $_cluster "type" ]
+ 		set _brokerdomain 	[ get_value $_cluster "brokerdomain" ]
+		
+
+ 		if { $_type == "application" && $_brokerdomain != "none" } {
+
+ 			set _clustername	[ get_cluster_name $_name ]
+			set _clustermembers 	[ get_clustermembers $pCell $_clustername ]
+
+			foreach _server $_clustermembers {
+				set _servername	[ $AdminConfig showAttribute $_server memberName ]
+				set _nodename	[ $AdminConfig showAttribute $_server nodeName ]
+				
+				#set _ip  	[ get_hostname $_nodename ]
+				#set _row 	[ lindex [ get_values $pNodes $_nodename ] 0 ]
+				#set _id  	[ get_value $_row "srvid" ]
+				#set _replicator "" 
+				#append _replicator rpl_ $_brokerdomain _ $_id 
+				
+				set_memory2memory $_servername
+				set_drsmodeclient $_servername
+				set_domain $_servername $_brokerdomain
+				
+				#set_preferredbroker $_servername $_replicator
+			}
+		}
+ 	}
+} 	 
+
+#--------------------------------------------------------------
+# create_mailsessions
+#--------------------------------------------------------------		
+proc create_mailsessions { pCell pMailSessions } {
+	global AdminConfig
+ 	global AdminControl
+ 	puts "proc: create_mailsessions"
+	
+ 	foreach _mailsessions $pMailSessions {
+ 		set _name [ get_value $_mailsessions "name" ]
+ 		set _jndi [ get_value $_mailsessions "jndi" ]
+ 		set _srvr [ get_value $_mailsessions "srvr" ]
+    		set _from [ get_value $_mailsessions "from" ]
+  		add_defaultmailsession $pCell $_name $_jndi $_srvr $_from
+ 	}
+}
+ 	
+#--------------------------------------------------------------
+# add_logconfig2applications
+#--------------------------------------------------------------	
+proc add_logconfig2applications { pLib } {
+	global AdminConfig
+ 	global AdminControl
+ 	puts "proc: add_logconfig2applications"
+ 	
+ 	set _skiplist		[ list adminconsole filetransfer ]
+ 	set _applications 	[ get_applicationlist ]
+ 	foreach _application $_applications {
+ 		if { [ lsearch $_skiplist $_application ] == -1 } {
+ 			add_sharedlib2application $_application $pLib
+ 		}
+ 	}
+}
+ 
+#--------------------------------------------------------------
+# create_logdirs
+#--------------------------------------------------------------	
+proc create_logdirs { pBaseDir } {
+	global AdminConfig
+ 	global AdminControl
+ 	puts "proc: create_logdirs"
+ 	
+ 	set _skiplist		[ list adminconsole filetransfer ]
+ 	set _applications 	[ get_applicationlist ]
+ 	foreach _application $_applications {
+ 		if { [ lsearch $_skiplist $_application ] == -1 } {
+ 			create_directory $pBaseDir/$_application
+ 		}
+ 	}
+ }
+ 
+#--------------------------------------------------------------
+# create_dir
+#--------------------------------------------------------------	
+proc create_directory { pDirectory } {
+	global AdminConfig
+ 	puts "proc: create_directory" 
+ 	
+ 	set _rc -1 
+ 	
+ 	if { [ file exists $pDirectory ] == 0 } {
+ 		set _rc [ catch { exec mkdir $pDirectory } ]
+ 	
+ 		if { $_rc != 0 } {
+			log_warning "create_directory - could not create directory $pDirectory"
+ 		}
+ 	} else {
+		log_debug "create_directory - directory $pDirectory already exists"
+ 	}
+ 		
+}
+
+#--------------------------------------------------------------
+# log_rootlogger
+#--------------------------------------------------------------	
+proc log_rootlogger { pFD } {
+	global AdminConfig
+ 	puts "proc: log_rootlogger"
+ 	
+ 	puts $pFD "log4j.rootLogger=OFF"
+	puts $pFD "log4j.appender.stdout=org.apache.log4j.ConsoleAppender"
+	puts $pFD "log4j.appender.stdout.layout=org.apache.log4j.PatternLayout"
+	puts $pFD "log4j.appender.stdout.layout.ConversionPattern=\[%d{ISO8601}\] \[%p\] %c: %m %n"
+	puts $pFD ""
+}
+
+#--------------------------------------------------------------
+# log_applicationlogger
+#--------------------------------------------------------------	
+proc log_applicationlogger { pFD pBaseDir pApplication } {
+	global AdminConfig
+ 	puts "proc: log_applicationlogger"
+ 	
+ 	puts $pFD "log4j.logger.$pApplication=ERROR, $pApplication"
+	puts $pFD "log4j.appender.$pApplication=org.apache.log4j.DailyRollingFileAppender"
+	puts $pFD "log4j.appender.$pApplication.File=$pBaseDir/$pApplication/access.log"
+	puts $pFD "log4j.appender.$pApplication.DatePattern=\'.\'yyyy-MM-dd"
+	puts $pFD "log4j.appender.$pApplication.Append=true"
+	puts $pFD "log4j.appender.$pApplication.layout=org.apache.log4j.PatternLayout"
+	puts $pFD "log4j.appender.$pApplication.layout.ConversionPattern=\[%d{ISO8601}\] \[%p\] %c: %m %n"
+	puts $pFD ""
+}
+
+#--------------------------------------------------------------
+# log_config_open
+#--------------------------------------------------------------	
+proc log_config_open { pLog4jProperties } {
+	global AdminConfig
+ 	puts "proc: log_config_open"
+ 	
+ 	set _fd [ open "$pLog4jProperties" "w" ]
+ 	
+ 	return $_fd
+}
+
+#--------------------------------------------------------------
+# log_config_close
+#--------------------------------------------------------------	
+proc log_config_close { pFD } {
+	global AdminConfig
+ 	puts "proc: log_config_close" 
+ 	
+ 	close $pFD
+}
+
+#--------------------------------------------------------------
+# create_log4jproperties
+#--------------------------------------------------------------	
+proc create_log4jproperties { pLog4jProperties pLogBaseDir } {
+	global AdminConfig
+ 	puts "proc: create_log4jproperties" 
+ 	
+ 	set _skiplist		[ list adminconsole filetransfer ]
+ 	set _fd 		[ log_config_open "$pLog4jProperties.new" ]
+ 	set _applications 	[ get_applicationlist]
+
+	log_rootlogger $_fd
+	 	
+ 	foreach _application $_applications {
+ 		if { [ lsearch $_skiplist $_application ] == -1 } {
+ 			log_applicationlogger $_fd $pLogBaseDir $_application
+ 		}
+ 	}
+	
+	log_config_close $_fd		
+	
+	if { [ file exists "$pLog4jProperties.save" ] == 0 } {
+ 		exec /usr/bin/cp "$pLog4jProperties.new" "$pLog4jProperties"
+ 		exec /usr/bin/cp "$pLog4jProperties.new" "$pLog4jProperties.save"
+ 	}
+}
+
+#--------------------------------------------------------------
+# update_log4jproperties
+#--------------------------------------------------------------	
+proc update_log4jproperties { pLog4jProperties } {
+	global AdminConfig
+ 	puts "proc: update_log4jproperties" 
+ 	
+ 	if { [ file exists "$pLog4jProperties.save" ] && [ file exists "$pLog4jProperties.new" ] } {
+		create_diff "$pLog4jProperties.save" "$pLog4jProperties.new"
+		apply_patch $pLog4jProperties $pLog4jProperties.save.diff
+		exec /usr/bin/mv "$pLog4jProperties.new" "$pLog4jProperties.save"
+		set _rc [ catch { file delete -force "$pLog4jProperties.save.diff" } ]
+	}
+}
+
+#--------------------------------------------------------------
+# copy_file
+#--------------------------------------------------------------	
+proc copy_file { pSource pDest } {
+	global AdminConfig
+ 	puts "proc: copy_file" 
+ 	
+ 	if { [ file exists $pSource ] } {
+ 		exec /usr/bin/cp "$pSource" "$pDest"
+ 	}
+}
+
+#--------------------------------------------------------------
+# create_backupcopy
+#--------------------------------------------------------------	
+proc create_backupcopy { pFile } {
+	global AdminConfig
+ 	puts "proc: create_backupcopy" 
+ 	
+ 	copy_file "$pFile" "$pFile.backup"
+}
+
+#--------------------------------------------------------------
+# create_diff
+#--------------------------------------------------------------	
+proc create_diff { pNew pOld } {
+	global AdminConfig
+ 	puts "proc: create_diff" 
+ 	
+ 	if { [ file exists $pNew ] && [ file exists $pOld ] } {
+ 		set _rc [ catch { exec /usr/bin/bash -c "/usr/bin/diff $pNew $pOld > $pNew.diff" } _results ]
+ 		if { $_rc == 0 } {
+ 			file delete -force "$pNew.diff"
+ 		}
+ 	}
+}
+
+#--------------------------------------------------------------
+# apply_patch
+#--------------------------------------------------------------	
+proc apply_patch { pFile pDiff } {
+	global AdminConfig
+ 	puts "proc: apply_patch"
+ 	
+ 	if { [ file exists $pDiff ] } {
+ 		set _rc [ catch { exec /usr/bin/bash -c "/usr/bin/patch -i $pDiff $pFile" }  _results ]
+ 	}
+}
+
+#-------------------------------------------------------------------------
+# SPECIFIC PROCEDURES
+# END
+#-------------------------------------------------------------------------
+
+
+
+
+
+
+#-------------------------------------------------------------------------
+# BEGIN
+# SECURITY PROCEDURES
+#-------------------------------------------------------------------------
+
+#--------------------------------------------------------------
+# load_properties
+#--------------------------------------------------------------	
+proc load_properties { pFileName } {
+	global AdminConfig 
+	puts "proc: load_properties"
+	
+	java::import java.io.FileInputStream
+	java::import java.util.Properties
+
+	set _properties 	[ java::new Properties ]
+	set _inputstream	[ java::new FileInputStream $pFileName ]
+	
+	$_properties load $_inputstream
+	return $_properties
+}
+
+#--------------------------------------------------------------
+# build_ldapparameterlist
+#--------------------------------------------------------------	
+proc build_ldapparameterlist { pFileName } {
+	global AdminConfig 
+	puts "proc: build_ldapparameterlist"
+	set _attributes {}
+
+	
+	set _properties [ load_properties $pFileName ]
+
+	set _primaryid 		[ $_properties getProperty LDAPPrimaryID ]
+	set _registryserverid 	[ $_properties getProperty LDAPUseRegistryServerID ]
+	set _serverid 		[ $_properties getProperty LDAPServerId ]
+	set _ldappassword 	[ $_properties getProperty LDAPPassword ]
+	set _servertype 	[ $_properties getProperty LDAPServerType ]
+	set _hostname		[ $_properties getProperty LDAPHostName ]
+	set _port		[ $_properties getProperty LDAPPort ]
+	set _basedn		[ $_properties getProperty LDAPBaseDN ]
+	set _binddn		[ $_properties getProperty LDAPBindDN ]
+	set _bindpwd		[ $_properties getProperty LDAPBindPassword ]
+	set _searchtimeout	[ $_properties getProperty LDAPsearchTimeout ]
+	set _reuseconn		[ $_properties getProperty LDAPreuseConnection ]
+	set _ic			[ $_properties getProperty LDAPIgnoreCase ]
+	set _sslenabled		[ $_properties getProperty LDAPsslEnabled ]
+	set _sslconfig		[ $_properties getProperty LDAPsslConfig ]
+	
+	if {$_primaryid != {}} {
+		lappend _attributes [ list primaryAdminId $_primaryid ]
+	}
+	if {$_registryserverid != {}} {
+		lappend _attributes [list useRegistryServerId $_registryserverid]
+	}
+	if {$_serverid != {}} {
+		lappend _attributes [list serverId $_serverid]
+	}
+	if {$_ldappassword != {}} {
+		lappend _attributes [list serverPassword $_ldappassword]
+	}
+	if {$_servertype != {}} {
+		lappend _attributes [list type $_servertype]
+		update_ldapfilter $pFileName
+	}
+	if {$_hostname != {} && $_port != {}} {  
+		lappend _attributes [list hosts [list [list [list host $_hostname] [list port $_port]]]] [list realm $_hostname:$_port]  
+	}
+	if {$_basedn != {}} {
+	 	lappend _attributes [list baseDN $_basedn]
+	}
+	if {$_binddn != {}} {
+		lappend _attributes [list bindDN $_binddn]
+	}
+	if {$_bindpwd != {}} {
+		lappend _attributes [list bindPassword $_bindpwd]
+	}
+	if {$_searchtimeout != {}} {
+		lappend _attributes [list searchTimeout $_searchtimeout]
+	}
+	if {$_reuseconn != {}} {
+		lappend _attributes [list reuseConnection $_reuseconn]
+	}
+	if {$_ic != {}} {
+		lappend _attributes [list ignoreCase $_ic]
+	}
+	if {$_sslenabled != {}} {
+		lappend _attributes [list sslEnabled	$_sslenabled]
+	}
+	if {$_sslconfig != {}} {
+		lappend _attributes [list sslConfig $_sslconfig]
+	}
+	
+	log_info ">>>>>----- Security Configuration/LDAP Parameters"
+	log_info "Attributes: $_attributes"
+	
+	return $_attributes
+}
+
+#--------------------------------------------------------------
+# update_ldapfilter
+#--------------------------------------------------------------	
+proc update_ldapfilter { pFileName } {
+	global AdminConfig 
+	puts "proc: update_ldapfilter"
+	set _attributes {}
+	set _properties [ load_properties $pFileName ]
+	
+	set _searchfilter 	[ $AdminConfig list LDAPSearchFilter ]
+	lappend _attributes 	[list userFilter [ $_properties getProperty userFilter ] ]
+	lappend _attributes 	[list groupFilter [ $_properties getProperty groupFilter ] ]	
+	lappend _attributes 	[list userIdMap [ $_properties getProperty userIdMap ] ]
+	lappend _attributes 	[list groupIdMap [ $_properties getProperty groupIdMap ] ]	
+	lappend _attributes 	[list groupMemberIdMap [ $_properties getProperty groupMemberIdMap ] ]
+	
+	$AdminConfig modify $_searchfilter $_attributes
+}
+	
+#--------------------------------------------------------------
+# get_ldapuserregistry 
+#--------------------------------------------------------------	
+proc get_ldapuserregistry { } {
+	global AdminConfig 
+	puts "proc: get_ldapuserregistry"
+	
+	set _ldapuserregistry [ $AdminConfig list LDAPUserRegistry ] 
+	return $_ldapuserregistry 
+}
+
+#--------------------------------------------------------------
+# set_ldapuserregistry 
+#--------------------------------------------------------------	
+proc set_ldapuserregistry { pList } {
+	global AdminConfig 
+	puts "proc: set_ldapuserregistry"
+	set _attributes {}
+	
+	set _currentregistry [ get_ldapuserregistry ]
+	
+	if { $_currentregistry != "null" || $_currentregistry != {} } {
+		set _temp [ catch {$AdminConfig showAttribute $_currentregistry hosts} _hostidlist]
+		
+		if { $_hostidlist != {} } {
+			foreach _hostid $_hostidlist {
+				set _temp [ catch { $AdminConfig remove $_hostid } result]
+				log_info "Removed hostId $_hostid\n"
+			}
+		}
+		if { [ catch { $AdminConfig modify $_currentregistry $pList } _result ] } {
+			log_info "\$AdminConfig modify $_currentregistry $pList caught an exception $result\n"
+			return
+		} else {
+                        log_info "LDAP configured"
+		}
+	} else {
+		log_info "LDAPUserRegistry ConfigId was not found\n"
+	}
+}
+
+#--------------------------------------------------------------
+# update_ldapuserregistry 
+#--------------------------------------------------------------	
+proc update_ldapuserregistry { pFileName } {
+	global AdminConfig 
+	puts "proc: update_ldapuserregistry"	
+	
+	set _attributes [ build_ldapparameterlist $pFileName ]
+	set_ldapuserregistry $_attributes
+}
+
+
+#--------------------------------------------------------------
+# parse_appname 
+#--------------------------------------------------------------	
+proc parse_appname { _pfile } {
+        global AdminConfig 
+	puts "proc: parse_appname"	
+	
+	set  _app $_pfile
+	
+	set  _dot	[ string first ".ear" $_pfile ]
+
+	if { $_dot > 0 } {
+		set _app [ string range $_app 0 [ expr $_dot - 1 ] ]
+	}
+	
+	set  _slash       	[ string last "/" $_app ]
+	set  _backslash		[ string last "\\" $_app ]
+	if { $_backslash > $_slash } {
+		set _slash $_backslash
+	}
+        if { $_slash > 0 } {
+		set _app [ string range $_app [ expr $_slash + 1 ] end ]
+	}
+	
+        return $_app
+}
+
+#--------------------------------------------------------------
+# get_appwebmodules
+#--------------------------------------------------------------	
+proc get_appwebmodules { _appname } {
+	global AdminConfig 
+	global AdminApp
+	puts "proc: get_appwebmodules"
+	set _deployment [ $AdminConfig getid /Deployment:$_appname/ ]
+	set _deployed	[ $AdminConfig showAttribute $_deployment deployedObject ]
+	set _modules 	[ $AdminConfig showAttribute $_deployed modules ]
+
+	return $_modules
+}
+	
+#--------------------------------------------------------------
+# get_deployedappvhost
+#--------------------------------------------------------------	
+proc get_deployedappvhost { _appname } {
+	global AdminConfig 
+	global AdminApp
+	puts "proc: get_deployedappvhost"
+	
+	set _appdata [ $AdminApp view $_appname ]
+	set _appdata [split $_appdata "\n"]
+     	foreach _line $_appdata {
+     		if { [ regexp {Virtual host:} $_line ] == 1 } {
+     			set _first 	[ expr [ string first ":" $_line ] + 1 ]
+     			set _last	[ string length $_line ]
+     			set _temp 	[ string range $_line $_first $_last ] 
+     			set _vhost	[ string trim $_temp ]
+     			return $_vhost
+          	}
+    	 }
+    	 return
+}
+
+#--------------------------------------------------------------
+# get_webmoduleconfig
+#--------------------------------------------------------------	
+proc get_webmoduleconfig { _appname } {
+	global AdminConfig 
+	global AdminApp
+	puts "proc: get_webmoduleconfig"
+
+	set _config [] 	
+	set _appdata [ $AdminApp view $_appname ]
+	if { [ regexp "(Web (m|M)odule:( )*\[a-zA-Z0-9\]*\nURI:( )*\[a-zA-Z0-9./\\,-\]*\nVirtual (h|H)ost:( )*\[a-zA-Z0-9_-\]*\n)+" $_appdata _matchstring ] == 1 } {
+		set _config [ parse_webmoduleconfig $_matchstring ]
+	}
+	
+	return $_config
+}
+
+#--------------------------------------------------------------
+# parse_webmoduleconfig
+#--------------------------------------------------------------	
+proc parse_webmoduleconfig { _string } {
+	global AdminConfig 
+	global AdminApp
+	puts "proc: parse_webmoduleconfig"
+	
+	set _counter 1 
+	set _appdata [ split $_string "\n" ]
+	foreach _line $_appdata {
+		if { $_counter == 1 } {
+			set _name [ regexp_valueof $_line ]
+		}
+		if { $_counter == 2 } {
+			set _uri [ regexp_valueof $_line ]
+		}
+		if { $_counter == 3 } {
+			set _vhost [ regexp_valueof $_line ]
+			set _tmp [ list $_name $_uri $_vhost ] 
+			lappend _retlist [ list $_tmp ]
+			set _counter 0
+		}
+		
+		set _counter [ expr $_counter + 1 ]
+	}
+	return $_retlist 
+}
+
+#--------------------------------------------------------------
+# regexp_valueof
+#--------------------------------------------------------------	
+proc regexp_valueof { _string } {
+	global AdminConfig 
+	global AdminApp
+	puts "proc: regexp_valueof"
+	
+	if { [ regexp "(.*: *)(.*)" $_string _all _name _value] == 1 } {
+		return $_value
+	}
+	return
+}
+
+#--------------------------------------------------------------
+# get_appvhost
+#--------------------------------------------------------------	
+proc get_appvhost { _mapping } {
+	global AdminConfig 
+	global AdminApp
+	puts "proc: get_appvhost"
+	
+	#set _mapping [ list $_webmodulename $_uri $_virtualhostname ]
+	foreach line $_mapping {
+		lappend _options  $line
+	}
+	return  $_options 
+}
+
+#--------------------------------------------------------------
+# update_application 
+#--------------------------------------------------------------	
+proc update_application { _pfile } {
+	global AdminConfig 
+	global AdminApp
+	puts "proc: update_application"
+	
+	set _name 	[ parse_appname $_pfile ]
+	set _vhost 	[ get_appvhost [ get_webmoduleconfig $_name ] ]
+	set _mapping	[ list -MapWebModToVH  [ lindex $_vhost 0 ] ] 
+	set _update	[ list -update -appname $_name ]
+	append _operation " " $_update
+	append _operation " " $_mapping
+
+	set _rc [ $AdminApp install $_pfile $_operation ]
+	puts $_rc
+	$AdminApp edit $_name $_mapping
+}
+
+
+
+#--------------------------------------------------------------
+# set_customservice 
+#--------------------------------------------------------------
+proc set_customservice { pServer pClassName pClassPath pDisplayName pEnable } {
+	global AdminConfig 
+	debug "proc: set_customservice" 
+		
+	set _server 	[ $AdminConfig getid /Server:$pServer/ ]
+	set _customsvc	[ $AdminConfig list CustomService $_server ]
+
+	
+	set _classname		[ list classname $pClassName ]
+	set _classpath 		[ list classpath $pClassPath ]
+	set _displayname 	[ list displayName $pDisplayName ]
+	set _enable 		[ list enable $pEnable ]
+	
+	set _attrs			[ list $_classname $_classpath $_displayname $_enable ]
+	
+	if { [ llength [ lindex $_customsvc 0 ] ] == 0 } {
+		set _newid [ $AdminConfig create CustomService $_server $_attrs ]
+	} 		
+
+}
+
+
+
+#--------------------------------------------------------------
+# @SCHEDULER Procedures - begin. 
+#--------------------------------------------------------------
+
+
+#--------------------------------------------------------------
+# get_wm_provider 
+#--------------------------------------------------------------
+proc get_wm_provider { pCell } {
+	global AdminConfig 
+	debug "proc: get_wm_provider" 
+
+	set _wm_provider [ $AdminConfig getid /Cell:$pCell/WorkManagerProvider:WorkManagerProvider/ ]
+	return $_wm_provider
+}
+
+#--------------------------------------------------------------
+# get_schd_provider 
+#--------------------------------------------------------------
+proc get_schd_provider  { pCell } {
+	global AdminConfig 
+	debug "proc: get_sch_provider" 
+
+	set _schd_provider [ $AdminConfig getid /Cell:$pCell/SchedulerProvider:SchedulerProvider ]
+	return $_schd_provider
+}
+
+#--------------------------------------------------------------
+# get_clst_wm_provider 
+#--------------------------------------------------------------
+proc get_clst_wm_provider  { pCluster } {
+	global AdminConfig 
+	debug "proc: get_clst_wm_provider " 
+
+	set _wm_provider [ $AdminConfig getid /ServerCluster:$pCluster/WorkManagerProvider:WorkManagerProvider/ ]
+	return $_wm_provider
+}
+
+#--------------------------------------------------------------
+# get_clst_schd_provider 
+#--------------------------------------------------------------
+proc get_clst_schd_provider  { pCluster } {
+	global AdminConfig 
+	debug "proc: get_clst_schd_provider" 
+
+	set _schd_provider [ $AdminConfig getid /ServerCluster:$pCluster/SchedulerProvider:SchedulerProvider/ ]
+	return $_schd_provider
+}
+
+#--------------------------------------------------------------
+# create_work_manager
+#--------------------------------------------------------------
+proc create_work_manager { pName pJNDI pIsGrow pMaxThr pMinThr pAlarmThr pServices pThrPrio pCategory pProvider } {
+	global AdminConfig 
+	debug "proc: create_work_manager" 
+	
+	set _attr [ subst { {description "Non Default WM"} {category $pCategory} {isGrowable $pIsGrow} {jndiName $pJNDI} {maxThreads $pMaxThr} {minThreads $pMinThr} \
+    					{name "$pName"} {numAlarmThreads $pAlarmThr} {serviceNames "$pServices"} {threadPriority $pThrPrio} } ]
+
+	$AdminConfig create WorkManagerInfo $pProvider $_attr
+}
+
+#--------------------------------------------------------------
+# create_wm_defs
+#--------------------------------------------------------------
+proc create_wm_defs { pName pJNDI pProvider} {
+	global AdminConfig 
+	debug "proc: create_wm_defs" 
+	
+	set _growable       false
+	set _max       		1
+	set _min       		0
+	set _alarm  		9
+	set _services     	"com.ibm.ws.i18n;security;UserWorkArea;zos.wlm"
+	set _prio   		4
+
+	create_work_manager $pName $pJNDI $_growable $_max $_min $_alarm $_services $_prio "scheduler" $pProvider
+}
+
+#--------------------------------------------------------------
+# create_scheduler
+#--------------------------------------------------------------
+proc create_scheduler { pName pJNDI pDSJNDI pDSAlias pPollInterval pTblPrefix pWMJNDI pSchdProvider } {
+	global AdminConfig 
+	debug "proc: create_scheduler" 
+
+	set _name 		[ list name $pName ]
+	set _dsjndi 	[ list datasourceJNDIName $pDSJNDI ]
+	set _dsalias 	[ list datasourceAlias $pDSAlias ]
+	set _jndi		[ list jndiName $pJNDI ]
+	set _poll		[ list pollInterval $pPollInterval ]
+	set _prefix		[ list tablePrefix $pTblPrefix ]  
+	set _roles		[ list useAdminRoles true ]
+	set _wmjndi		[ list workManagerInfoJNDIName $pWMJNDI ]
+	set _attributes [ list $_name $_dsjndi $_dsalias $_jndi $_poll $_prefix $_roles $_wmjndi ]
+	
+	$AdminConfig create SchedulerConfiguration $pSchdProvider $_attributes
+}
+
+#--------------------------------------------------------------
+# clst_create_scheduler
+#--------------------------------------------------------------
+proc clst_create_scheduler { pCell pDataSource pDSAlias } {
+	global AdminConfig 
+	debug "proc: create_scheduler" 
+	
+	set _clusters [ get_clusters $pCell ]
+ 	foreach _cluster $_clusters {
+ 		set _clustername 	[ $AdminConfig showAttribute $_cluster name ]
+ 		if { [ regexp drs $_clustername ] == 0 } {
+ 			set _clst_wm_provider [ get_clst_wm_provider $_clustername ]
+ 			set _clst_schd_provider [ get_clst_schd_provider $_clustername ]
+ 			
+ 			set _wm_id [ $AdminConfig getid /ServerCluster:$_clustername/WorkManagerProvider:WorkManagerProvider/WorkManagerInfo:$_clustername/ ]
+ 			set _schd_id [ $AdminConfig getid /ServerCluster:$_clustername/SchedulerProvider:SchedulerProvider/SchedulerConfiguration:$_clustername/ ] 
+ 			
+ 			if { [ llength $_wm_id ] == 0 } { 
+ 				create_wm_defs $_clustername "wm/$_clustername" $_clst_wm_provider
+ 			} 
+			
+ 			if { [ llength $_schd_id ] == 0 } {  			
+ 				set _tblprefix ""
+ 				append _tblprefix $_clustername "_"
+ 				create_scheduler "$_clustername" "schd/$_clustername" $pDataSource $pDSAlias 30 "$_tblprefix" "wm/$_clustername" $_clst_schd_provider
+ 			}
+		}
+	}
+}
+
+#--------------------------------------------------------------
+# @SCHEDULER Procedures - end. 
+#--------------------------------------------------------------
+
+
+#--------------------------------------------------------------
+# @SCHEDULER Submiting Tasks - begin. 
+#--------------------------------------------------------------
+
+
+#--------------------------------------------------------------
+# get_scheduler_object
+#--------------------------------------------------------------
+proc get_scheduler_object { pScheduler } {
+	global AdminConfig 
+	global AdminControl 
+	debug "proc: get_scheduler_object" 
+	
+	set _scheduler [ $AdminControl queryNames WebSphere:*,type=WASScheduler,scheduler=$pScheduler ]
+	
+	if { [ llength $_scheduler ] != 0 } {
+		set _schd_object [ $AdminControl makeObjectName $_scheduler ]
+		return $_schd_object
+	}
+
+}
+
+#--------------------------------------------------------------
+# get_taskinfo_object
+#--------------------------------------------------------------
+proc get_taskinfo_object { pSchedulerObject } {
+	global AdminConfig 
+	global AdminControl 
+	debug "proc: get_taskinfo_object" 
+	
+	set _params 		[ java::new {java.lang.Object[]} 1 ]
+	set _sigs 			[ java::new {java.lang.String[]} 1 ]
+	$_params 			set 0 [ java::field com.ibm.websphere.scheduler.BeanTaskInfo class ]
+	$_sigs 				set 0 java.lang.Class
+	
+	set _taskinfo 		[ $AdminControl invoke_jmx $pSchedulerObject createTaskInfo $_params $_sigs ]
+	set _beantaskinfo 	[ java::cast com.ibm.websphere.scheduler.BeanTaskInfo  $_taskinfo]
+	
+	return $_beantaskinfo
+}
+
+#--------------------------------------------------------------
+# setup_taskinfo
+#--------------------------------------------------------------
+proc setup_taskinfo { pBeanTaskinfo pEJBJndi pName pRepeats pInterval } {
+	global AdminConfig 
+	global AdminControl 
+	debug "proc: setup_taskinfo" 
+	
+	$pBeanTaskinfo setStartTime [ java::new {java.util.Date long} [java::call System currentTimeMillis] ]
+	$pBeanTaskinfo setStartTimeInterval "30 * * * * ?"
+	$pBeanTaskinfo setNumberOfRepeats $pRepeats
+	$pBeanTaskinfo setTaskHandler $pEJBJndi
+	$pBeanTaskinfo setName $pName
+	
+	$pBeanTaskinfo setUserCalendar [ java::null ] CRON 
+	$pBeanTaskinfo setRepeatInterval $pInterval
+	return $pBeanTaskinfo
+}
+
+
+#--------------------------------------------------------------
+# submit_task
+#--------------------------------------------------------------
+proc submit_task { pScheduler pEJBJndi pName pRepeats pInterval pNotificationJNDI } {
+	global AdminConfig 
+	global AdminControl 
+	debug "proc: submit_task" 
+	
+	set _scheduler_object [ get_scheduler_object $pScheduler ]
+	set _taskinfo_object  [ get_taskinfo_object $_scheduler_object ]
+	set _taskinfo_object  [ setup_taskinfo $_taskinfo_object $pEJBJndi $pName $pRepeats $pInterval ]
+	
+	if { [ llength $pNotificationJNDI ] != 0 } {
+		$_taskinfo_object setNotificationSink $pNotificationJNDI
+		set _mask 	[expr 	[java::field com.ibm.websphere.scheduler.TaskNotificationInfo FIRED] + [java::field com.ibm.websphere.scheduler.TaskNotificationInfo COMPLETE]]
+		$_taskinfo_object {setNotificationSink String int} $pNotificationJNDI $_mask
+	}
+	
+	set _params [java::new {java.lang.Object[]} 1]
+	set _sigs [java::new {java.lang.String[]} 1]
+	
+	$_params 	set 0 $_taskinfo_object
+	$_sigs 		set 0 com.ibm.websphere.scheduler.TaskInfo
+
+	set _taskstatus [java::cast com.ibm.websphere.scheduler.TaskStatus [ $AdminControl invoke_jmx $_scheduler_object create $_params $_sigs]]
+
+	puts "Task Created.  TaskID= [$_taskstatus getTaskId]"
+	puts $_taskstatus
+}
+
+#--------------------------------------------------------------
+# scheduler_stop
+#--------------------------------------------------------------
+proc scheduler_stop { pScheduler } {
+	global AdminConfig 
+	global AdminControl 
+	debug "proc: scheduler_stop" 
+	
+	set _scheduler [ $AdminControl queryNames WebSphere:*,type=WASScheduler,scheduler=$pScheduler ]
+	
+	if { [ llength $_scheduler ] != 0 } {
+		$AdminControl invoke $_scheduler stopDaemon 
+	}
+}
+
+#--------------------------------------------------------------
+# scheduler_start
+#--------------------------------------------------------------
+proc scheduler_start { pScheduler } {
+	global AdminConfig 
+	global AdminControl 
+	debug "proc: scheduler_start" 
+	
+	set _scheduler [ $AdminControl queryNames WebSphere:*,type=WASScheduler,scheduler=$pScheduler ]
+	
+	if { [ llength $_scheduler ] != 0 } {
+		$AdminControl invoke $_scheduler startDaemon 0
+	}
+}
+
+#submit_task schd/clst_nocert ejb/HelloWorldScheduler test%1 10 "10 * * * * ?" ""
+#submit_task schd/clst_nocert ejb/HelloWorldScheduler test2 10 "10 * * * * ?" ejb/HelloWorldNotification

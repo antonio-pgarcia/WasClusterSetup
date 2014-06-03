@@ -1,0 +1,121 @@
+#*----------------------------------------------------------------------*
+#* HolisticView/MetaKnowledge						*
+#*     									*
+#*									*
+#* Copyright Notice:                                                	*
+#* Free use of this library is permitted under the guidelines and   	*
+#* in accordance with the most current version of the Common Public 	*
+#* License.                                                         	*
+#* http://www.opensource.org/licenses/cpl.php                       	*
+#*									*
+#*									*
+#*									*
+#*----------+-----------------------------------------------------------*
+#* PACKAGE  | 					 			*
+#*----------+-----------------------------------------------------------*
+#* MODULE   | ics.jacl		                                        *
+#*----------+-----------------------------------------------------------*
+#*									*
+#*									*
+#*----------------------------------------------------------------------*
+#* CREATED	    							*
+#*----------------------------------------------------------------------*
+#* AGARCIA/01-2006							*
+#*									*
+#*									*
+#*----------------------------------------------------------------------*
+#* MODIFIED 	   							*
+#*----------------------------------------------------------------------*
+#* 									*
+#*									*
+#*----------------------------------------------------------------------*
+#* CHANGE LOG    							*
+#*----------------------------------------------------------------------*
+#*									*
+#*									*
+#*									*
+#*									*
+#*----------------------------------------------------------------------*
+#* NOTES 	   							*
+#*----------------------------------------------------------------------*
+#* @seg-social.es - Initial Cluster Settings				*
+#*									*
+#*									*
+#*									*
+#*									*
+#*----------------------------------------------------------------------*/
+
+#--------------------------------------------------------------
+# DEFINES
+#--------------------------------------------------------------
+set _SCRIPT_BASE [ list /apps/WebSphere61/scripts ]
+
+#--------------------------------------------------------------
+# Include Lib
+#--------------------------------------------------------------
+source $_SCRIPT_BASE/jacl/mgmtlib.jacl
+source $_SCRIPT_BASE/data/settings-default.jacl
+
+
+#--------------------------------------------------------------
+# show_info
+#--------------------------------------------------------------
+proc show_info { args } {
+	puts "----------------------------------------------------------------------"
+	puts " ICS - Initial Cluster Settings"
+	puts " Creates the initial cluster configuration"
+	puts " 2006-02"
+	puts ""
+	puts " ICS will take x steps"
+	puts "\tSTEP 1 - Configuration name space bindings"
+	puts "\tSTEP 2 - Create server variables"
+	puts "\tSTEP 3 - Create shared libraries"
+	puts "\tSTEP 4 - Create virtual hosts"
+	puts "\tSTEP 5 - Create server clusters"
+	puts "\tSTEP 6 - Create clusters members"
+	puts "\tSTEP 7 - Add classloader to cluster member"
+	puts "\tSTEP 8 - Changes the http and https transport"
+	puts "\tSTEP 9 - Adds the virtual host to cluster member"
+	puts "\tSTEP 9.1 - Sets the servlet cache config to true"
+	puts "\tSTEP 10 - Add library reference to cluster members"
+	puts "\tSTEP 11 - Changes the WebContainer thread setings"
+	puts "\tSTEP 12 - Changes the JVM process memory settings"
+	puts "\tSTEP 13 - Set JVM to start with option -server"
+	puts "\tSTEP 14 - Creates the replication domains"
+	puts "\tSTEP 15 - Configures the servers for session replication"
+	puts "\tSTEP 16 - Sets the initial state to start"
+	puts "\tSTEP 17 - Sets the monitoring policy to RUNNING"
+	puts "\tSTEP 18 - Creates mail sessions"
+	puts "----------------------------------------------------------------------"
+	puts ""
+	puts ""
+}
+#--------------------------------------------------------------
+# ics - Initial Cluster Settings
+#--------------------------------------------------------------
+
+
+#--------------------------------------------------------------
+# Main 
+#--------------------------------------------------------------
+
+if { ( $argc >= 1 ) } {
+	set _customization_file	[ lindex $argv 0 ]
+	source $_customization_file
+	puts "Customization file in use: $_customization_file"
+}
+	
+	show_info 
+	create_namebindings $_CELL $_NAMEBINDINGS
+	create_variables $_CELL $_VARIABLES 
+	create_libraries $_CELL $_LIBRARIES 
+	create_virtualhosts $_CELL $_CLUSTERS $_VHOSTS
+	create_clusters $_CELL $_CLUSTERS
+	create_clustermembers $_CELL $_NODES $_CLUSTERS
+	create_replicationdomains $_CELL $_NODES $_CLUSTERS
+	config_brokerclients $_CELL $_NODES $_CLUSTERS
+	create_libraryref $_CELL $_LIBRARIES 
+	create_othersettings $_CELL $_CLUSTERS
+	create_jvmproperties $_CELL $_JVMPROPERTIES
+	create_mailsessions $_CELL $_MAILSESSIONS
+	do_commit $_CELL
