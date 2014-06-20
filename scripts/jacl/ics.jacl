@@ -20,7 +20,7 @@
 #*----------------------------------------------------------------------*
 #* CREATED	    							*
 #*----------------------------------------------------------------------*
-#* AGARCIA/01-2006							*
+#* Antonio Prestes Garcia/Jan-2006					*
 #*									*
 #*									*
 #*----------------------------------------------------------------------*
@@ -38,7 +38,7 @@
 #*----------------------------------------------------------------------*
 #* NOTES 	   							*
 #*----------------------------------------------------------------------*
-#* @seg-social.es - Initial Cluster Settings				*
+#* Initial Cluster Settings						*
 #*									*
 #*									*
 #*									*
@@ -66,7 +66,7 @@ proc show_info { args } {
 	puts " Creates the initial cluster configuration"
 	puts " 2006-02"
 	puts ""
-	puts " ICS will take x steps"
+	puts " ICS will take 18 steps"
 	puts "\tSTEP 1 - Configuration name space bindings"
 	puts "\tSTEP 2 - Create server variables"
 	puts "\tSTEP 3 - Create shared libraries"
