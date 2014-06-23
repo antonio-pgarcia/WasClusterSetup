@@ -1,0 +1,478 @@
+
+#--------------------------------------------------------------
+# BEGIN
+# DEFINE CELL AND NODES
+#--------------------------------------------------------------
+
+set _CELL	[ list seg-social.es ]
+
+set _NODES {
+	{ { name was-01 } { srvid 1 } }
+	{ { name was-02 } { srvid 2 } }
+}
+
+#--------------------------------------------------------------
+# DEFINE  
+# JNDI
+#--------------------------------------------------------------
+set _NAMEBINDINGS { 
+{ { name LDAP_PERFILES } 
+	{ nameInNameSpace config/ldap_perfiles } 
+	{ stringToBind "giss14b.seg-social.es:389" } } 
+
+{ { name LDAP_FNMT } 
+	{ nameInNameSpace config/ldap_fnmt } 
+	{ stringToBind "giss14c.seg-social.es:3389" } } 	
+
+{ { name LDAP_PKI } 
+	{ nameInNameSpace config/ldap_pki } 
+	{ stringToBind "giss30.seg-social.es:389" } } 	
+
+{ { name PKI_AUTHORITY } 
+	{ nameInNameSpace config/pki_authority } 
+	{ stringToBind "giss30.seg-social.es:829" } } 		
+
+{ { name PKI_MANAGER } 
+	{ nameInNameSpace config/pki_manager } 
+	{ stringToBind "giss30.seg-social.es:709" } }
+	
+{ { name ENTX_INFRA } 
+	{ nameInNameSpace config/entx_infra } 
+	{ stringToBind "RPC/SILINFRA/CALLNAT;ETB080:10100" } }	
+
+{ { name ENTX_RECAUDACION } 
+	{ nameInNameSpace config/entx_recaudacion } 
+	{ stringToBind "RPC/SILTGR/CALLNAT;ETB077:10100" } }		
+
+{ { name ENTX_AFILIACION } 
+	{ nameInNameSpace config/entx_afiliacion } 
+	{ stringToBind "RPC/SILTGA37/CALLNAT;ETB080:10100" } }			
+	
+{ { name ENTX_RED } 
+	{ nameInNameSpace config/entx_red } 
+	{ stringToBind "RPC/SILRED/CALLNAT;ETB080:10100" } }				
+
+{ { name ENTX_INSS } 
+	{ nameInNameSpace config/entx_red } 
+	{ stringToBind "RPC/SRV2/CALLNAT;ETB138:18024" } }					
+		
+}
+
+
+#--------------------------------------------------------------
+# BEGIN
+# VARIABLES
+#--------------------------------------------------------------
+set _VARIABLES { 
+{ { symbolicName CELL_SHAREDLIBS } 
+	{ value /apps/WebSphere61/sharedlibs } 
+	{ description "CELL Shared libraries" } }
+	
+{ { symbolicName CELL_ORACLE_JDBC } 
+	{ value "${CELL_SHAREDLIBS}/instantclient10" } 
+	{ description "ORACLE JDBC HOME" } }
+	
+{ { symbolicName CELL_SQLJ } 
+	{ value "${CELL_SHAREDLIBS}/sqlj" } 
+	{ description "SQLJ HOME" } }
+
+{ { symbolicName CELL_ENTIREX } 
+	{ value "${CELL_SHAREDLIBS}/entirex" } 
+	{ description "ENTIREX HOME" } }
+
+{ { symbolicName CELL_ENTRUST } 
+	{ value "${CELL_SHAREDLIBS}/entrust" } 
+	{ description "ENTRUST HOME" } }
+
+{ { symbolicName CELL_GISS-APIS } 
+	{ value "${CELL_SHAREDLIBS}/giss-apis" } 
+	{ description "GISS APIS HOME" } }
+
+{ { symbolicName CELL_LOGGING } 
+	{ value "${CELL_SHAREDLIBS}/commons-logging" } 
+	{ description "Jakarta commons-logging" } }	
+
+{ { symbolicName CELL_LOGGING_CONFIG } 
+	{ value "${CELL_SHAREDLIBS}/logging-config" } 
+	{ description "commons-logging config" } }	
+
+{ { symbolicName CELL_HIBERNATE } 
+	{ value "${CELL_SHAREDLIBS}/hibernate" } 
+	{ description "Hibernate HOME" } }
+
+{ { symbolicName CELL_JAKARTA_ORO } 
+	{ value "${CELL_SHAREDLIBS}/jakarta-oro" } 
+	{ description "Jakarta oro" } }	
+
+{ { symbolicName CELL_JAKARTA_REGEXP } 
+	{ value "${CELL_SHAREDLIBS}/jakarta-regexp" } 
+	{ description "Jakarta regexp" } }		
+
+{ { symbolicName CELL_SPRINGFRAMEWORK20 } 
+	{ value "${CELL_SHAREDLIBS}/springframework2.0" } 
+	{ description "Spring Framework 2.0" } }			
+	
+{ { symbolicName CELL_AXIS } 
+	{ value "${CELL_SHAREDLIBS}/axis" } 
+	{ description "Axis Web Services" } }			
+	
+{ { symbolicName CELL_XERCES } 
+	{ value "${CELL_SHAREDLIBS}/xerces" } 
+	{ description "Xerces" } }			
+	
+{ { symbolicName CELL_WSPROXY } 
+	{ value "${CELL_SHAREDLIBS}/ws-proxy" }
+	{ description "Proxy Internet-Intranet" } }			
+	
+{ { symbolicName CELL_STRUTS } 
+	{ value "${CELL_SHAREDLIBS}/struts" }
+	{ description "struts 2.0.6" } }				
+	
+{ { symbolicName CELL_BOUNCYCASTLE } 
+	{ value "${CELL_SHAREDLIBS}/bouncycastle" }
+	{ description "BouncyCastle library" } }	
+
+{ { symbolicName CELL_INSTALL_ROOT }
+        { value "/apps/WebSphere61" }
+        { description "Common Install Directory" } }
+
+{ { symbolicName APP_INSTALL_ROOT }
+        { value "${CELL_INSTALL_ROOT}/appls/installedApps" }
+        { description "Installed Applications" } }
+
+{ { symbolicName LOG_ROOT }
+        { value "${CELL_INSTALL_ROOT}/logs" }
+        { description "Log Root" } }
+			
+}
+
+
+#--------------------------------------------------------------
+# BEGIN
+# LIBRARIES
+#--------------------------------------------------------------
+set _LIBRARIES {
+{ { name oracle } 
+	{ classPath "${CELL_ORACLE_JDBC}/ojdbc14.jar" } 
+	{ nativePath "${CELL_ORACLE_JDBC}" } 
+	{ description "ORACLE Shared Library" }
+	{ type server } }	
+	
+{ { name sqlj } 
+	{ classPath "${CELL_SQLJ}/runtime12.jar" } 
+	{ nativePath "${CELL_SQLJ}" } 
+	{ description "SQLJ Shared Library" }
+	{ type server } }	
+
+{ { name entirex } 
+	{ classPath "${CELL_ENTIREX}/entirex.jar\n${CELL_ENTIREX}/entxrt.jar" } 
+	{ nativePath "${CELL_ENTIREX}" } 
+	{ description "ENTIREX Shared Library" }
+	{ type server } }	
+	
+{ { name entrust } 
+	{ classPath "${CELL_ENTRUST}" } 
+	{ nativePath "${CELL_ENTRUST}" } 
+	{ description "ENTRUST Shared Library" } 
+	{ type server } }	
+
+{ { name giss-apis } 
+	{ classPath "${CELL_GISS-APIS}" } 
+	{ nativePath "${CELL_GISS-APIS}" } 
+	{ description "GISS APIS Shared Library" } 
+	{ type application } }	
+
+{ { name hibernate } 
+	{ classPath "${CELL_HIBERNATE}/hibernate3.jar" } 
+	{ nativePath "${CELL_HIBERNATE}" } 
+	{ description "Hibernate Shared Library" } 
+	{ type server } }	
+
+{ { name logging } 
+	{ classPath "${CELL_LOGGING}" } 
+	{ nativePath "${CELL_LOGGING}" } 
+	{ description "Logging Shared Library" }
+	{ type application } }	
+
+{ { name logging-config } 
+	{ classPath "${CELL_LOGGING_CONFIG}" } 
+	{ nativePath "${CELL_LOGGING_CONFIG}" } 
+	{ description "commons-logging config Shared Library" }
+	{ type application } }	
+
+{ { name jakarta-oro } 
+	{ classPath "${CELL_JAKARTA_ORO}" } 
+	{ nativePath "${CELL_JAKARTA_ORO}" } 
+	{ description "Jakarta oro Shared Library" }
+	{ type server } }		
+
+{ { name jakarta-regexp } 
+	{ classPath "${CELL_JAKARTA_REGEXP}" } 
+	{ nativePath "${CELL_JAKARTA_REGEXP}" } 
+	{ description "Jakarta regexp Shared Library" }
+	{ type server } }
+
+{ { name spring-framework2.0 } 
+	{ classPath "${CELL_SPRINGFRAMEWORK20}" } 
+	{ nativePath "${CELL_SPRINGFRAMEWORK20}" } 
+	{ description "Spring Framework 2.0 Shared Library" }
+	{ type server } }	
+		
+{ { name axis } 
+	{ classPath "${CELL_AXIS}" } 
+	{ nativePath "${CELL_AXIS}" } 
+	{ description "Axis Apache Library" }
+	{ type server } }	
+		
+{ { name xerces } 
+	{ classPath "${CELL_XERCES}" } 
+	{ nativePath "${CELL_XERCES}" } 
+	{ description "Xerces" }
+	{ type server } }	
+
+{ { name ws-proxy } 
+	{ classPath "${CELL_WSPROXY}" } 
+	{ nativePath "${CELL_WSPROXY}" } 
+	{ description "Proxy Internet-Intranet" }
+	{ type application } }
+	
+{ { name struts } 
+	{ classPath "${CELL_STRUTS}" } 
+	{ nativePath "${CELL_STRUTS}" } 
+	{ description "Struts 2.0.6 Library" }
+	{ type server } }	
+
+{ { name bouncycastle } 
+	{ classPath "${CELL_BOUNCYCASTLE}" } 
+	{ nativePath "${CELL_BOUNCYCASTLE}" } 
+	{ description "BouncyCastle library" }
+	{ type server } }	
+}
+
+#--------------------------------------------------------------
+# BEGIN
+# JVM PROPERTIES
+#--------------------------------------------------------------
+set _JVMPROPERTIES {
+{ { name  "http.proxyHost" } 
+	{ value "194.179.55.40" } }
+
+{ { name  "http.proxyPort" } 
+	{ value "8080" } }	
+
+{ { name  "http.nonProxyHosts" } 
+	{ value "10.*|194.179.55.*|213.99.40.*|*.seg-social.es|*.ss" } }
+
+{ { name  "https.proxyHost" } 
+	{ value "194.179.55.40" } }
+
+{ { name  "https.nonProxyHosts" } 
+	{ value "10.*|194.179.55.*|213.99.40.*|*.seg-social.es|*.ss" } }
+
+{ { name  "https.proxyPort" } 
+	{ value "8080" } }		
+
+{ { name  "oracle.net.tns_admin" } 
+	{ value "/apps/WebSphere61/sharedlibs/instantclient10/network/admin" } }		
+
+{ { name  "java.awt.headless" } 
+	{ value "true" } }			
+}
+
+
+#--------------------------------------------------------------
+# BEGIN
+# VHOSTS
+#--------------------------------------------------------------
+set _VHOSTS {
+{ { name secureauth_host } 
+	{ aliases { w2.seg-social.es:443 tp.seg-social.es:443 red.seg-social.es:443 } } }
+	
+{ { name secure_host } 
+	{ aliases { w6.seg-social.es:443 } } }	
+}
+
+#--------------------------------------------------------------
+# BEGIN
+# MAILSESSIONS
+#--------------------------------------------------------------
+set _MAILSESSIONS {
+{ { name internet } 
+  { jndi "mail/internet" } 
+  { srvr smtp.seg-social.es }
+  { from internet@seg-social.es } }
+}
+
+#--------------------------------------------------------------
+# BEGIN
+# CLUSTERS
+#--------------------------------------------------------------
+	
+set _CLUSTERS { 
+
+{ { name drs-tp } 
+	{ type replicator }
+	{ servers 1 } 
+	{ weight 10 } 
+	
+	{ vhost	default_host }
+	{ transport2vhost false }
+	{ http_base 29301 } 
+	{ https_base 29311 } 
+	{ minthreads 10 } 
+	{ maxthreads 25 } 
+	{ timeout 5000 } 
+	{ initial 256 } 
+	{ maximum 512 } 
+	{ jvmArgs "-server" }
+	
+	{ user wasadmin }
+	{ group mqm }				
+	{ brokerdomain truepass }
+	{ cport 27973 } 
+	{ sport 27974 } }
+
+{ { name drs-red } 
+	{ type replicator }
+	{ servers 1 } 
+	{ weight 10 } 
+	
+	{ vhost	default_host }
+	{ transport2vhost false }
+	{ http_base 29306 } 
+	{ https_base 29316 } 
+	{ minthreads 10 } 
+	{ maxthreads 25 } 
+	{ timeout 5000 } 
+	{ initial 256 } 
+	{ maximum 512 } 
+	{ jvmArgs "-server" }
+	
+	{ user wasadmin }
+	{ group mqm }
+	{ brokerdomain red }
+	{ cport 27983 } 
+	{ sport 27984 } }	
+
+{ { name drs-common } 
+	{ type replicator }
+	{ servers 1 } 
+	{ weight 10 } 
+	
+	{ vhost	default_host }
+	{ transport2vhost false }
+	{ http_base 29321 } 
+	{ https_base 29331 } 
+	{ minthreads 10 } 
+	{ maxthreads 25 } 
+	{ timeout 5000 } 
+	{ initial 256 } 
+	{ maximum 512 } 
+	{ jvmArgs "-server" }
+	
+	{ user wasadmin }
+	{ group mqm }
+	{ brokerdomain common }
+	{ cport 27993 } 
+	{ sport 27994 } }	
+
+{ { name drs-nocert } 
+	{ type replicator }
+	{ servers 1 } 
+	{ weight 10 } 
+	
+	{ vhost	default_host }
+	{ transport2vhost false }
+	{ http_base 29336 } 
+	{ https_base 29346 } 
+	{ minthreads 10 } 
+	{ maxthreads 25 } 
+	{ timeout 5000 } 
+	{ initial 256 } 
+	{ maximum 512 } 
+	{ jvmArgs "-server" }
+	
+	{ user wasadmin }
+	{ group mqm }
+	{ brokerdomain nocert }
+	{ cport 28003 } 
+	{ sport 28004 } }	
+
+
+{ { name truepass } 
+	{ type application }
+	{ servers 1 } 
+	{ weight 10 } 
+	
+	{ vhost	secureauth_host }
+	{ transport2vhost true }
+	{ http_base 29101 } 
+	{ https_base 29111 } 
+	{ minthreads 32 } 
+	{ maxthreads 75 } 
+	{ timeout 5000 } 
+	{ initial 256 } 
+	{ maximum 512 } 
+	{ jvmArgs "-server" }
+	{ user wasadmin }
+	{ group mqm }
+	{ brokerdomain truepass } }
+	
+{ { name red } 
+	{ type application }
+	{ servers 1 } 
+	{ weight 10 } 
+	
+	{ vhost	secureauth_host }
+	{ transport2vhost true }
+	{ http_base 29121 } 
+	{ https_base 29131 } 
+	{ minthreads 32 } 
+	{ maxthreads 75 } 
+	{ timeout 5000 } 
+	{ initial 256 } 
+	{ maximum 512 } 
+	{ jvmArgs "-server" }
+	{ user wasadmin }
+	{ group mqm }
+	{ brokerdomain red } }
+	
+{ { name common } 
+	{ type application }
+	{ servers 1 } 
+	{ weight 10 } 
+	
+	{ vhost	secureauth_host }
+	{ transport2vhost true }
+	{ http_base 29141 } 
+	{ https_base 29151 }  
+	{ minthreads 32 } 
+	{ maxthreads 75 } 
+	{ timeout 5000 } 
+	{ initial 256 } 
+	{ maximum 512 } 
+	{ jvmArgs "-server" }
+	{ user wasadmin }
+	{ group mqm }
+	{ brokerdomain common } }
+	
+{ { name nocert } 
+	{ type application }
+	{ servers 1 } 
+	{ weight 10 } 
+	
+	{ vhost	secure_host }
+	{ transport2vhost true }
+	{ http_base 29161 } 
+	{ https_base 29171 }  
+	{ minthreads 32 } 
+	{ maxthreads 75 } 
+	{ timeout 5000 } 
+	{ initial 256 } 
+	{ maximum 512 } 
+	{ jvmArgs "-server" }
+	{ user wasadmin }
+	{ group mqm }
+	{ brokerdomain nocert } }
+	
+}
