@@ -1,14 +1,11 @@
-WasClusterSetup
-===============
+#WasClusterSetup#
 
-This project contains a collection of jacl scritps suitable for websphere cluster customization.
+The WebSphere Cluster Setup Toop. This project contains a collection of jacl scritps suitable for completely automating the websphere cluster customization.
 
-First Header  | Second Header
-------------- | -------------
-Content Cell  | Content Cell
-Content Cell  | Content Cell
+## Installing ##
 
-```java
-public void Init() {
-}
-```
+## Included tools ##
+
+## Using setup tool ##
+
+
