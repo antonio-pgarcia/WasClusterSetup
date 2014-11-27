@@ -31,4 +31,10 @@ The main tool is called **Initial Cluster Setting (ics.jacl)**  which undertake 
 
 ## Using setup tool ##
 
+The ics tool is invoked as follow:
 
+```jacl
+wsadmin -f ics.jacl ../data/setting.jacl
+```
+
+The **settings.jacl** file must be modified in order to reflect the installation needs.
