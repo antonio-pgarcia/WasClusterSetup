@@ -37,4 +37,4 @@ The ics tool is invoked as follow:
 wsadmin -f ics.jacl ../data/setting.jacl
 ```
 
-The **settings.jacl** file must be modified in order to reflect the installation needs.
+The **settings.jacl** file must be modified with the proper values in order to reflect the installation requirements.
